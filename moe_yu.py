@@ -25,9 +25,9 @@ from Crypto.Util.Padding import pad
 from Crypto.Random import get_random_bytes
 from concurrent.futures import ThreadPoolExecutor
 
-# --- CONFIGURATION ---
-KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
-ID_STORAGE = ".moeyu_device_id" # Device ID ကို အသေသိမ်းမည့်ဖိုင်
+# --- CONFIGURATION (မင်းပေးထားတဲ့ Link အတိုင်း အတိအကျပါ) ---
+KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/refs/heads/main/key.txt"
+ID_STORAGE = ".moeyu_device_id"
 
 # Colors
 w, g, y, r, b, c = "\033[1;37m", "\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[1;34m", "\033[1;36m"
@@ -39,12 +39,11 @@ def Line():
     print(f"{y}─" * os.get_terminal_size()[0])
 
 def get_hwid():
-    """ID ကို အသေသိမ်းထားပြီး ပြန်ထုတ်ပေးသည့်စနစ် (တစ်ခါထုတ်ပြီးရင် ဘယ်တော့မှ မပြောင်းပါ)"""
+    """ID ကို အသေသိမ်းထားပြီး ပြန်ထုတ်ပေးသည့်စနစ်"""
     if os.path.exists(ID_STORAGE):
         with open(ID_STORAGE, "r") as f:
             return f.read().strip()
     else:
-        # ပထမဆုံးအကြိမ်တွင်သာ Unique ID ထုတ်မည်
         user = os.popen('whoami').read().strip()
         model = os.popen('getprop ro.product.model').read().strip()
         raw = f"{user}-{model}-{random.randint(100000, 999999)}"
@@ -62,12 +61,7 @@ def Logo():
  ▓██  ▀█▄      ▒██       ▒███     ▒██ ██░  ▒██ ██░
  ░██   █▌      ▒██    ▄  ▒▓█  ▄   ░ ▐██▓░  ░ ▐██▓░
  ░██████░      ▒ ████▀   ░▒████▒  ░ ██▒▓░  ░ ██▒▓░
- ░ ▒▓ ▒ ░      ▒ ░ ▒ ░   ░░ ▒░ ░   ██▒▒▒    ██▒▒▒ 
- ░ ░▒ ░        ░  ▒       ░ ░  ░ ▓██ ░▒░  ▓██ ░▒░ 
-   ░  ░      ░          ░    ▒ ▒ ░░   ▒ ▒ ░░  
-     ░       ░ ░        ░  ░ ░ ░      ░ ░      ░  
-{g}
-         ── {w}MOE YU BYPASS PRO {g}──{w}"""
+{g}         ── {w}MOE YU BYPASS PRO {g}──{w}"""
     print(logo)
     Line()
     print(f"{g}  [👤] {w}Dev      : {y}@moeyu")
@@ -81,15 +75,20 @@ def check_key():
     Logo()
     print(f"{y}[*] Verifying Secure License...{w}")
     try:
-        # Cache မငြိအောင် timestamp ထည့်ထားသည်
-        headers = {'User-Agent': 'Mozilla/5.0', 'Cache-Control': 'no-cache'}
+        # Cache မငြိအောင် No-cache headers သုံးသည်
+        headers = {
+            'User-Agent': 'Mozilla/5.0',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        }
+        # URL အနောက်မှာ Timestamp ထည့်ပြီး Cache ကိုကျော်သည်
         res = requests.get(f"{KEY_URL}?t={int(time.time())}", headers=headers, timeout=15)
         
         if res.status_code == 200:
             lines = res.text.splitlines()
             for line in lines:
                 if "|" in line:
-                    # Space တွေပါခဲ့ရင် အလိုအလျောက် ဖြတ်ထုတ်သည်
+                    # Space များကို အလိုအလျောက် ဖြတ်ထုတ်ရန် strip() သုံးထားသည်
                     parts = line.strip().split("|")
                     db_key = parts[0].strip()
                     exp_str = parts[1].strip()
