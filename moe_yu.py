@@ -25,9 +25,9 @@ from Crypto.Util.Padding import pad
 from Crypto.Random import get_random_bytes
 from concurrent.futures import ThreadPoolExecutor
 
-# --- CONFIGURATION (Moe Yu's Database) ---
-# Raw link ကို သုံးထားလို့ Database ဖတ်ရတာ ပိုမြန်ပြီး ပိုစိတ်ချရပါတယ်
+# --- CONFIGURATION ---
 KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
+ID_STORAGE = ".moeyu_device_id" # Device ID ကို အသေသိမ်းမည့်ဖိုင်
 
 # Colors
 w, g, y, r, b, c = "\033[1;37m", "\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[1;34m", "\033[1;36m"
@@ -39,16 +39,19 @@ def Line():
     print(f"{y}─" * os.get_terminal_size()[0])
 
 def get_hwid():
-    """လူတိုင်းအတွက် မတူညီတဲ့ Unique Fixed ID ထုတ်ပေးမည့်စနစ်"""
-    try:
+    """ID ကို အသေသိမ်းထားပြီး ပြန်ထုတ်ပေးသည့်စနစ် (တစ်ခါထုတ်ပြီးရင် ဘယ်တော့မှ မပြောင်းပါ)"""
+    if os.path.exists(ID_STORAGE):
+        with open(ID_STORAGE, "r") as f:
+            return f.read().strip()
+    else:
+        # ပထမဆုံးအကြိမ်တွင်သာ Unique ID ထုတ်မည်
         user = os.popen('whoami').read().strip()
         model = os.popen('getprop ro.product.model').read().strip()
-        raw_id = f"{user}-{model}"
-        if not user or not model:
-            raw_id = str(uuid.getnode())
-        return hashlib.md5(raw_id.encode()).hexdigest().upper()
-    except:
-        return "MOEYU-STABLE-USER-BYPASS"
+        raw = f"{user}-{model}-{random.randint(100000, 999999)}"
+        new_id = hashlib.md5(raw.encode()).hexdigest().upper()
+        with open(ID_STORAGE, "w") as f:
+            f.write(new_id)
+        return new_id
 
 def Logo():
     clear()
@@ -73,35 +76,34 @@ def Logo():
     Line()
 
 def check_key():
-    """Permanent License Verification with Space Stripping"""
+    """GitHub Database မှ Key ကို စစ်ဆေးခြင်း"""
     my_id = get_hwid()
     Logo()
-    print(f"{y}[*] Verifying License from Secure Database...{w}")
+    print(f"{y}[*] Verifying Secure License...{w}")
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        # GitHub Cache မဖြစ်အောင် timestamp ထည့်ထားပါတယ်
+        # Cache မငြိအောင် timestamp ထည့်ထားသည်
+        headers = {'User-Agent': 'Mozilla/5.0', 'Cache-Control': 'no-cache'}
         res = requests.get(f"{KEY_URL}?t={int(time.time())}", headers=headers, timeout=15)
         
         if res.status_code == 200:
             lines = res.text.splitlines()
             for line in lines:
                 if "|" in line:
-                    # Space တွေကို တစ်ခါတည်း ဖြတ်ထုတ်ရန်
+                    # Space တွေပါခဲ့ရင် အလိုအလျောက် ဖြတ်ထုတ်သည်
                     parts = line.strip().split("|")
-                    if len(parts) >= 2:
-                        db_key = parts[0].strip() # GitHub က ID
-                        exp_str = parts[1].strip() # သက်တမ်းကုန်မည့်ရက်
-                        
-                        if db_key == my_id:
-                            today = datetime.now().date()
-                            expiry = datetime.strptime(exp_str, "%Y-%m-%d").date()
-                            if today <= expiry:
-                                print(f"{g}[+] Authorized! Access Granted.{w}")
-                                time.sleep(1.5)
-                                return True
-                            else:
-                                print(f"{r}[!] YOUR KEY HAS EXPIRED!{w}")
-                                sys.exit()
+                    db_key = parts[0].strip()
+                    exp_str = parts[1].strip()
+                    
+                    if db_key == my_id:
+                        today = datetime.now().date()
+                        expiry = datetime.strptime(exp_str, "%Y-%m-%d").date()
+                        if today <= expiry:
+                            print(f"{g}[+] Access Authorized! Welcome Moe Yu.{w}")
+                            time.sleep(1.5)
+                            return True
+                        else:
+                            print(f"{r}[!] YOUR LICENSE HAS EXPIRED!{w}")
+                            sys.exit()
             
             print(f"{r}[!] UNREGISTERED ID!{w}")
             print(f"{y}[>] Your ID: {c}{my_id}{w}")
@@ -110,8 +112,8 @@ def check_key():
         else:
             print(f"{r}[!] Server Error: {res.status_code}{w}")
             sys.exit()
-    except Exception as e:
-        print(f"{r}[!] Connection Failed! Check Internet.{w}")
+    except:
+        print(f"{r}[!] Connection Failed! Check your internet.{w}")
         sys.exit()
 
 async def get_session_id(session, session_url, prev_id):
@@ -146,10 +148,7 @@ class InternetAccess:
 
 def feature():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--option", choices=["code", "internet", "setup"], required=True)
-    parser.add_argument("-m", "--mode", choices=["digit", "ascii"], default="digit")
-    parser.add_argument("-l", "--length", type=int, default=6)
-    parser.add_argument("-s", "--speed", type=int, default=100)
+    parser.add_argument("-o", "--option", choices=["internet", "setup"], required=True)
     args = parser.parse_args()
 
     if args.option == "setup":
@@ -157,18 +156,13 @@ def feature():
         try:
             res = requests.get("http://192.168.0.1", timeout=5).url
             gw = re.search('gw_address=(.*?)&', res).group(1)
-            portal = requests.get(res).text
-            sid_url = "https://portal-as.ruijienetworks.com" + re.search("href='(.*?)'</script>", portal).group(1)
-            with open(".session_url", "w") as f: f.write(sid_url)
             with open(".ip", "w") as f: f.write(gw)
             print(f"{g}[+] Setup Successful!{w}")
-        except: print(f"{r}[!] Setup Failed.")
+        except: print(f"{r}[!] Setup Failed. Check WiFi connection.")
     elif args.option == "internet":
         asyncio.run(InternetAccess().execute())
-    elif args.option == "code":
-        asyncio.run(VoucherCode(args.mode, args.length, args.speed).start())
 
 if __name__ == "__main__":
     if check_key():
         try: feature()
-        except KeyboardInterrupt: print(f"\n{r}[!] Stopped.{w}")
+        except KeyboardInterrupt: print(f"\n{r}[!] Tool Stopped.{w}")
