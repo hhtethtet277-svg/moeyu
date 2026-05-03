@@ -19,18 +19,10 @@ import requests
 import subprocess
 from datetime import datetime, timedelta
 from urllib.parse import quote
-from Crypto.PublicKey import RSA
-from Crypto.Util.Padding import pad
-from Crypto.Cipher import AES, PKCS1_v1_5
-from Crypto.Random import get_random_bytes
 from concurrent.futures import ThreadPoolExecutor
 
 # --- Database Configuration ---
-# GitHub က သင့်ရဲ့ link အတိုင်း ချိတ်ဆက်ထားပါတယ်
 DB_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
-
-SUCCESS = 0
-IN_RUNNING_ASCII_BIN = []
 
 # ANSI Color codes
 w = "\033[1;00m" # White
@@ -47,7 +39,6 @@ def Line():
 
 def Logo():
     clear()
-    # ပုံထဲကအတိုင်း Logo ကို Design ပြန်ထုတ်ထားပါတယ်
     logo = f"""{g} ___  ___  ________  _______           ___  ___  ___  ___ 
 |  \/  |/  __  \|  ___||           |  \/  | |\  \ |  \ 
 | \  / ||  |  | || |__  |           | \  / || \  \ |  \ 
@@ -71,19 +62,16 @@ def Logo():
     print(f"{w}[*] Target    : Ruijie Network Router")
     Line()
 
-# --- Licensing & Expiry System ---
+# --- Licensing System ---
 
 def get_uid():
-    """ထုတ်ကုန်ရောင်းဖို့အတွက် ခိုင်မာတဲ့ Device ID ထုတ်တဲ့အပိုင်း"""
     try:
-        # Termux environment specific ID
         uid_str = subprocess.check_output(['getprop', 'ro.serialno']).decode().strip()
     except:
         uid_str = str(os.getlogin()) + str(os.getuid())
     return hashlib.md5(uid_str.encode()).hexdigest()[:15].upper()
 
 def check_license():
-    """GitHub က key.txt ကိုဖတ်ပြီး ID နဲ့ ရက်စွဲ စစ်ဆေးတဲ့အပိုင်း"""
     user_id = get_uid()
     Logo()
     print(f"{w}[*] Checking Pro License... {y}Please wait")
@@ -99,15 +87,11 @@ def check_license():
             if "," in entry:
                 db_id, exp_date_str = entry.split(",")
                 if db_id.strip() == user_id:
-                    # ရက်စွဲ စစ်ဆေးခြင်း
                     expiry_date = datetime.strptime(exp_date_str.strip(), "%Y-%m-%d")
-                    current_date = datetime.now()
-                    
-                    if current_date < expiry_date:
-                        remaining = expiry_date - current_date
+                    if datetime.now() < expiry_date:
                         print(f"{g}[+] Access Granted!")
-                        print(f"{g}[+] Expiry: {exp_date_str} ({remaining.days} days left)")
-                        time.sleep(2)
+                        print(f"{g}[+] Expiry: {exp_date_str}")
+                        time.sleep(1)
                         return True
                     else:
                         print(f"{r}[!] License Expired on {exp_date_str}!")
@@ -122,15 +106,37 @@ def check_license():
         print(f"{r}[!] Check Error: {e}")
         return False
 
-# --- Core Features ---
+# --- Class Dummy Structures (သင့်ရဲ့ Original Code Logic များ ဤနေရာတွင် ထည့်ပါ) ---
 
-def feature():
-    # Program စတာနဲ့ License အရင်စစ်မယ်
+class VoucherCode:
+    def __init__(self, mode, length, speed, tasks, debug):
+        self.mode = mode
+        self.length = length
+        
+    async def execute_digit(self):
+        print(f"{g}[+] Hacking Voucher Codes (Digit Mode)...")
+        # Bruteforce logic များကို ဤနေရာတွင် ဆက်ရေးပါ
+        
+    async def execute_ascii(self):
+        print(f"{g}[+] Hacking Voucher Codes (ASCII Mode)...")
+
+class InternetAccess:
+    async def execute(self):
+        print(f"{g}[+] Bypassing Internet Access...")
+
+class RecheckVoucher:
+    async def check(self):
+        print(f"{g}[+] Checking Router Status...")
+
+# --- Main Feature Controller ---
+
+def main():
+    # ၁။ အရင်ဆုံး လိုင်စင်စစ်မည်
     if not check_license():
         sys.exit()
 
-    Logo()
-    parser = argparse.ArgumentParser()
+    # ၂။ လိုင်စင်အောင်မြင်မှ Argument Parser ကို စတင်မည်
+    parser = argparse.ArgumentParser(description="Moe Yu Pro Engine")
     parser.add_argument("-o", "--option", choices=["code", "internet", "check", "setup"], required=True)
     parser.add_argument("-m", "--mode", choices=["digit", "ascii-lower", "ascii-upper", "ascii-mix"], default="digit")
     parser.add_argument("-l", "--length", choices=[6,7], type=int, default=6)
@@ -138,48 +144,31 @@ def feature():
     parser.add_argument("-t", "--tasks", type=int, default=100)
     parser.add_argument("-d", "--debug", action="store_true")
     
+    # Command line ကနေရိုက်လိုက်တဲ့ option တွေကို ဖတ်မယ်
     args = parser.parse_args() 
-    
-    # Feature logic (Original code အတိုင်း)
+
+    # ၃။ ရွေးချယ်လိုက်တဲ့ Option အလိုက် Feature များကို Run မည်
     if args.option == "code":
         vobj = VoucherCode(mode=args.mode, length=args.length, speed=args.speed, tasks=args.tasks, debug=args.debug)
         if args.mode == "digit":
             asyncio.run(vobj.execute_digit())
         else:
             asyncio.run(vobj.execute_ascii())
+            
     elif args.option == "internet":
         iobj = InternetAccess()
         asyncio.run(iobj.execute())
+        
     elif args.option == "check":
         robj = RecheckVoucher()
         asyncio.run(robj.check())
+        
     elif args.option == "setup":
-        Setup().set()
-
-# --- Classes (InternetAccess, VoucherCode, Setup) ---
-# Original code ထဲက logic တွေကို ဒီအောက်မှာ ဆက်လက်ထည့်သွင်းနိုင်ပါတယ်
-# (နေရာလွတ်သက်သာရန် အရေးကြီးဆုံး Licensing ပိုင်းကို ဦးစားပေးရေးထားပါတယ်)
-
-class InternetAccess:
-    def __init__(self):
-        # Base64 encoded URL များကို ဒီမှာ ပြန်ထည့်ပါ
-        self.session_url = "https://portal-as.ruijienetworks.com/api/auth/wifidog..." 
-        try:
-            self.ip = open(".ip", "r").read().strip()
-        except:
-            print(f"{r}[!] Run setup first!")
-            sys.exit()
-
-    async def execute(self):
-        Logo()
-        print(f"{g}[+] Pro Internet Access Running...")
-        # ... (Original code logic)
-
-# ... (VoucherCode, RecheckVoucher နှင့် Setup Class များ အရင်အတိုင်း ထည့်ပါ)
+        print(f"{y}[*] Setup Mode Started...")
 
 if __name__ == "__main__":
     try:
-        feature()
+        main()
     except KeyboardInterrupt:
         print(f"\n{r}[!] Stopped by user.")
         sys.exit()
