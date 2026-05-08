@@ -27,5 +27,3 @@ def check_access():
 
 if __name__ == "__main__":
     check_access()
-
-ဘယ်မှာ ထည့်ရမှာလဲ
