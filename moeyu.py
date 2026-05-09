@@ -22,7 +22,7 @@ from urllib.parse import quote, urlparse, parse_qs, urljoin
 # ==========================================
 
 # GitHub Link (သင်ပေးထားသော link အသစ်)
-SHEET_CSV_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/refs/heads/main/key"
+SHEET_CSV_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
 
 LICENSE_STORAGE = os.path.expanduser("~/.ruijie_license.json")
 KEY_STORAGE_FILE = os.path.expanduser("~/.ruijie_device_key.txt")
