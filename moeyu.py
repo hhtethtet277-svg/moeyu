@@ -20,7 +20,6 @@ from urllib.parse import quote, urlparse, parse_qs, urljoin
 # ==========================================
 # 0. GOOGLE SHEETS LICENSE SYSTEM
 # ==========================================
-
 SHEET_CSV_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/main/key.txt"
 
 
