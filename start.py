@@ -1,17 +1,22 @@
+import argparse
 import hack
-import sys
 
-def banner():
-    print("-" * 40)
-    print("      MOE YU BYPASS PRO ENGINE v5.2")
-    print(" GitHub: https://github.com/hhtethtet277-svg/my-database-")
-    print("-" * 40)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", "--output")
+    parser.add_argument("-m", "--mode")
+    parser.add_argument("-l", "--length", type=int)
+    parser.add_argument("-s", "--size", type=int)
+    
+    args = parser.parse_args()
+    
+    print(f"Output: {args.output}")
+    print(f"Mode: {args.mode}")
+    print(f"Length: {args.length}")
+    print(f"Size: {args.size}")
+
+    # ဒီနေရာမှာ hack.so ထဲက logic ကို လှမ်းခေါ်ပါ
+    # hack.process(args.mode, args.length)
 
 if __name__ == "__main__":
-    banner()
-    try:
-        # hack.so ထဲက logic ကို စတင် run ရန် (ဥပမာ hack.main() လို့ အမည်ပေးထားရင်)
-        # hack.main() 
-        pass
-    except Exception as e:
-        print(f"Error: {e}")
+    main()
