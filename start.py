@@ -1,16 +1,13 @@
 import sys
 import os
 
-# requests နဲ့ တခြား လိုအပ်တဲ့ libraries တွေ ရှိမရှိ စစ်ဆေးပြီး မရှိရင် error ပြပေးမယ့်အပိုင်း
+# လိုအပ်တဲ့ libraries တွေရှိမရှိ အရင်စစ်မယ်
 try:
     import requests
-    import Crypto
-    import ping3
-    import ntplib
-    import aiohttp
-except ImportError:
-    print("\n[!] လိုအပ်သော Libraries များ မရှိသေးပါ။")
-    print("[*] 'pip install requests pycryptodome ping3 ntplib aiohttp' ကို ရိုက်ပြီး အရင်သွင်းပါ။\n")
+    import hack  # hack.so သို့မဟုတ် hack.py ကို လှမ်းခေါ်ခြင်း
+except ImportError as e:
+    print(f"\n[!] Error: {e}")
+    print("[*] 'pip install requests pycryptodome ping3 ntplib aiohttp' ကို အရင်သွင်းပေးပါ။")
     sys.exit()
 
 def banner():
@@ -20,12 +17,24 @@ def banner():
     print("-" * 45)
 
 if __name__ == "__main__":
+    os.system('clear') # Screen ကို အရင်ရှင်းမယ်
     banner()
     
+    # ၁။ User ဆီကနေ Username တောင်းမယ်
+    username = input("\n[+] Enter Username to access: ").strip()
+    
+    if not username:
+        print("[!] Username ထည့်ပေးဖို့ လိုအပ်ပါတယ်။")
+        sys.exit()
+
     try:
-        # hack.so (သို့မဟုတ် hack.py) ကို import လုပ်လိုက်တာနဲ့ 
-        # အထဲက logic တွေက တန်းပြီး အလုပ်လုပ်ပါလိမ့်မယ်။
-        import hack
-        
+        # ၂။ hack.py/hack.so ထဲက check_license function ကို လှမ်းခေါ်ပြီး စစ်မယ်
+        if hack.check_license(username):
+            print("\n[+] Loading Bypass Engine...")
+            # ဒီနေရာမှာ key မှန်ရင် ဆက်လုပ်မယ့် logic တွေကို ခေါ်လို့ရပါပြီ
+            # ဥပမာ - hack.main_logic()
+            
+    except AttributeError:
+        print("\n[!] Error: hack.so ထဲမှာ check_license ဆိုတဲ့ function ကို ရှာမတွေ့ပါ။")
     except Exception as e:
         print(f"\n[!] Error တစ်ခု တက်သွားပါသည်: {e}")
