@@ -1,22 +1,31 @@
-import argparse
-import hack
+import sys
+import os
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--output")
-    parser.add_argument("-m", "--mode")
-    parser.add_argument("-l", "--length", type=int)
-    parser.add_argument("-s", "--size", type=int)
-    
-    args = parser.parse_args()
-    
-    print(f"Output: {args.output}")
-    print(f"Mode: {args.mode}")
-    print(f"Length: {args.length}")
-    print(f"Size: {args.size}")
+# requests နဲ့ တခြား လိုအပ်တဲ့ libraries တွေ ရှိမရှိ စစ်ဆေးပြီး မရှိရင် error ပြပေးမယ့်အပိုင်း
+try:
+    import requests
+    import Crypto
+    import ping3
+    import ntplib
+    import aiohttp
+except ImportError:
+    print("\n[!] လိုအပ်သော Libraries များ မရှိသေးပါ။")
+    print("[*] 'pip install requests pycryptodome ping3 ntplib aiohttp' ကို ရိုက်ပြီး အရင်သွင်းပါ။\n")
+    sys.exit()
 
-    # ဒီနေရာမှာ hack.so ထဲက logic ကို လှမ်းခေါ်ပါ
-    # hack.process(args.mode, args.length)
+def banner():
+    print("-" * 45)
+    print("      MOE YU BYPASS PRO ENGINE v5.2")
+    print(" GitHub: https://github.com/hhtethtet277-svg/my-database-")
+    print("-" * 45)
 
 if __name__ == "__main__":
-    main()
+    banner()
+    
+    try:
+        # hack.so (သို့မဟုတ် hack.py) ကို import လုပ်လိုက်တာနဲ့ 
+        # အထဲက logic တွေက တန်းပြီး အလုပ်လုပ်ပါလိမ့်မယ်။
+        import hack
+        
+    except Exception as e:
+        print(f"\n[!] Error တစ်ခု တက်သွားပါသည်: {e}")
