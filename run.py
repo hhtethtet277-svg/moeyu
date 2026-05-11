@@ -1,10 +1,18 @@
 import hack
 import sys
+import urllib3
+
+# SSL Error မတက်အောင် ပိတ်ထားခြင်း
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 if __name__ == "__main__":
-    # ၁။ အရင်ဆုံး License စစ်မယ်
-    if hack.check_license():
-        # ၂။ License အောင်မြင်ရင် Main Feature ကို run မယ်
-        # သင့် code ထဲက argparse က sys.argv ကို ဖတ်မှာဖြစ်လို့ 
-        # command line က ပေးလိုက်တဲ့ -o internet စတာတွေ auto အလုပ်လုပ်ပါမယ်
-        hack.feature()
+    try:
+        # ၁။ License အရင်စစ်မယ်
+        if hack.check_license():
+            # ၂။ အောင်မြင်ရင် Feature ကို run မယ်
+            hack.feature()
+    except KeyboardInterrupt:
+        print("\n[!] User မှ ရပ်တန့်လိုက်ပါသည်။")
+        sys.exit()
+    except Exception as e:
+        print(f"\n[!] Error: {e}")
