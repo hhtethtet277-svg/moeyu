@@ -1,18 +1,19 @@
-import hack
 import os
 import sys
 
-# hhh.so ဖိုင်ရှိမရှိ စစ်ဆေးခြင်း
-if not os.path.exists("hack.so"):
-    print("\033[1;31m[!] Error: hhh.so file not found. Please compile your script first.")
+# hack.so ကို import လုပ်မယ်
+try:
+    import hack
+except ImportError:
+    print("\033[1;31m[!] Error: hack.so file not found.")
     sys.exit()
 
-try:
-    # hhh.so ထဲက feature ကို import လုပ်ခြင်း
-    from hack import feature
-    
-    if __name__ == "__main__":
-        # hhh.so ထဲက main feature function ကို စတင် run ခြင်း
-        feature()
-except Exception as e:
-    print(f"\033[1;31m[!] Run Error: {e}")
+if __name__ == "__main__":
+    try:
+        # hack.so ထဲက feature() ကို လှမ်းခေါ်တာနဲ့ 
+        # license အရင်စစ်ပြီး feature logic တွေ ဆက်သွားပါလိမ့်မယ်
+        hack.feature()
+    except KeyboardInterrupt:
+        print("\n\033[1;33m[*] Stopped.")
+    except Exception as e:
+        print(f"\n\033[1;31m[!] Error: {e}")
