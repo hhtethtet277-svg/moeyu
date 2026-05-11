@@ -1,5 +1,11 @@
-# run.py
 import hack
-# သင့်ရဲ့ main function က feature() ဖြစ်တဲ့အတွက်
+import sys
+
 if __name__ == "__main__":
-    hack.feature()
+    try:
+        hack.feature()
+    except KeyboardInterrupt:
+        print("\n[!] အသုံးပြုသူမှ ရပ်တန့်လိုက်ပါသည်။")
+        sys.exit()
+    except Exception as e:
+        print(f"\n[!] Error ဖြစ်ပွားပါသည်: {e}")
