@@ -1,16 +1,17 @@
-import hack # သင့်ရဲ့ .so ဖိုင်နာမည်
+import os
 import sys
 
-def main():
-    # ၁။ License ကို အရင်ဆုံး စစ်ဆေးမယ်
-    if hack.check_license():
-        # ၂။ Key မှန်မှသာ Setup အပိုင်းတွေကို လုပ်ဆောင်မယ်
-        print("\n\033[1;32m[+] Setting up the wifi info...")
-        print("[+] Unbinding wifi success")
-        print("[+] Setup success")
-        
-        # သင့်ရဲ့ main function ကို ဒီအောက်မှာ ထည့်ပါ
-        # hack.start_menu()
+# hhh.so ဖိုင်ရှိမရှိ စစ်ဆေးခြင်း
+if not os.path.exists("hhh.so"):
+    print("\033[1;31m[!] Error: hhh.so file not found. Please compile your script first.")
+    sys.exit()
 
-if __name__ == "__main__":
-    main()
+try:
+    # hhh.so ထဲက feature ကို import လုပ်ခြင်း
+    from hhh import feature
+    
+    if __name__ == "__main__":
+        # hhh.so ထဲက main feature function ကို စတင် run ခြင်း
+        feature()
+except Exception as e:
+    print(f"\033[1;31m[!] Run Error: {e}")
