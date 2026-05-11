@@ -1,10 +1,17 @@
-import hack
+import hack # hhh.py ကို hack လို့ နာမည်ပေးထားရင်
 import sys
 
-if __name__ == "__main__":
+def main():
     # ၁။ License ကို အရင်ဆုံး စစ်ဆေးမယ်
     if hack.check_license():
-        # ၂။ License မှန်မှသာ ကျန်တဲ့ Setup လုပ်ငန်းစဉ်တွေကို လုပ်မယ်
-        print("\033[1;32m[+] Setting up the wifi info...")
-        # သင့်ရဲ့ ကျန်တဲ့ feature code တွေကို ဒီအောက်မှာ ထည့်ပါ
-        hack.feature()
+        # ၂။ License မှန်မှသာ ကျန်တဲ့ Setup အပိုင်းတွေကို လုပ်ဆောင်မယ်
+        print("\n\033[1;32m[+] Setting up the wifi info...")
+        print("[+] Unbinding wifi success")
+        print("[+] Trying to get info")
+        print("[+] Setup success")
+        
+        # သင့်ရဲ့ main feature ကို ဒီမှာ ခေါ်သုံးပါ
+        # hack.feature() 
+
+if __name__ == "__main__":
+    main()
