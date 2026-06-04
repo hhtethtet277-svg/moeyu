@@ -38,10 +38,10 @@ class RateLimiter:
             await asyncio.sleep(sleep_time)
 
 # --- Configuration ---
-BOT_TOKEN="8878132806:AAHh_8hqF62uuwfcm9JPuPUV5PXJSdf5A"
+BOT_TOKEN = "8878132806:AAHh_8hqF62uuwfcm9JPuPUV5PXJSdf5A"
 BOT_ID = "bot1" 
 
-# သင့်ရဲ့ MongoDB Connection String ကို တိုက်ရိုက်ထည့်သွင်းထားပါတယ်
+# MongoDB Connection String
 MONGO_URI = "mongodb+srv://hhtethtet277_db_user:VpcG7AtKY401kmO1@cluster0.vhj7ntv.mongodb.net/?appName=Cluster0"
 
 # --- MongoDB Setup ---
@@ -50,7 +50,6 @@ db = mongo_client["say_shi_lar_db"]
 users_collection = db["users"]
 
 async def init_db():
-    # MongoDB တွင် Table ကြိုဆောက်ရန်မလိုပါ၊ Connection အလုပ်လုပ်ကြောင်း အတည်ပြုသည်
     print("✨ MongoDB connected successfully for Say Shi Lar Project!")
 
 async def update_user(tg_id: int, updates: dict):
@@ -190,7 +189,6 @@ async def brute_force_task(tg_id: int, url: str, error_keyword: str, mode: str, 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     tg_id = message.from_user.id
-    user = await get_user_from_db(tg_id)
     
     welcome_text = (
         "မင်္ဂလာပါ TxiJuNaing Developer မှ ဖန်တီးထားသော **Say Shi Lar** Project Bot မှ ကြိုဆိုပါသည်! 🇲🇲\n\n"
@@ -331,9 +329,25 @@ async def cmd_refresh(message: types.Message):
     
     await message.answer("🔄 **Refresh အောင်မြင်ပါသည်!**\n\nသင့်၏ လက်ရှိ Run နေသော Task များနှင့် မှတ်ဉာဏ်များကို သန့်စင် ရှင်းလင်းပေးလိုက်ပါပြီ။")
 
-# --- Main Runner ---
+# --- MAIN RUNNER WITH WEB SERVER FOR RENDER ---
+async def handle_ping(request):
+    return aiohttp.web.Response(text="Bot is running smoothly!")
+
 async def main():
     await init_db()
+    
+    # Render Fail မဖြစ်စေရန် Web Server အသေးစားတစ်ခု တွဲပတ်ခြင်း
+    app = aiohttp.web.Application()
+    app.router.add_get("/", handle_ping)
+    runner = aiohttp.web.AppRunner(app)
+    await runner.setup()
+    
+    # Render က သတ်မှတ်ပေးသော Port သို့မဟုတ် Port 8080 တွင် ပတ်မည်
+    port = int(os.environ.get("PORT", 8080))
+    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"🌐 Web Server started on port {port} for Render keep-alive.")
+    
     print("🤖 Bot is starting polling with MongoDB...")
     await dp.start_polling(bot)
 
