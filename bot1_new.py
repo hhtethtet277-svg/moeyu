@@ -12,7 +12,7 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# aiohttp ၏ web module အား သီးသန့် import ယူခြင်း (Render server error အတွက် ပြင်ဆင်ချက်)
+# Render Server Error အား ဖြေရှင်းရန်အတွက် web module အား သီးသန့် ခေါ်ယူခြင်း
 import aiohttp
 from aiohttp import web
 
@@ -43,7 +43,7 @@ class RateLimiter:
 # --- Configuration ---
 BOT_TOKEN = "8796960995:AAEZ7iQ_kb8HY0iMkTf-fgGOb5GGJI8gLPw"
 BOT_ID = "bot1" 
-ADMIN_ID = 7695807003
+ADMIN_ID = 7695807003  # သင်ပေးထားသော Telegram ID (အလိုအလျောက် Approved ဖြစ်စေရန်)
 
 # MongoDB Connection String
 MONGO_URI = "mongodb+srv://hhtethtet277_db_user:VpcG7AtKY401kmO1@cluster0.vhj7ntv.mongodb.net/?appName=Cluster0"
@@ -291,10 +291,10 @@ async def cmd_status(message: types.Message):
     status_text = (
         "📊 **Say Shi Lar Engine Status**\n\n"
         f"⚙️ **အခြေအနေ:** `{st['status']}`\n"
-        f"🔄 **စမ်းသပ်ပြီးမှု:** `{st['attempts']:} / {total:}`\n"
-        f"🎯 **အောင်မြင်မှု (Found):** `{st['found']:} / {st['target_success']}`\n"
+        f"🔄 **စမ်းသပ်ပြီးမှု:** `{st['attempts']:,} / {total:,}`\n"
+        f"🎯 **အောင်မြင်မှု (Found):** `{st['found']:,} / {st['target_success']}`\n"
         f"⚡ **အမြန်နှုန်း:** `{st['speed']} req/s`\n"
-        f"📍 **လက်ရှိညွှန်းကိန်း (Index):** `{current_progress:}`"
+        f"📍 **လက်ရှိညွှန်းကိန်း (Index):** `{current_progress:,}`"
     )
     await message.answer(status_text, parse_mode="Markdown")
 
@@ -332,24 +332,23 @@ async def cmd_refresh(message: types.Message):
     
     await message.answer("🔄 **Refresh အောင်မြင်ပါသည်!**\n\nသင့်၏ လက်ရှိ Run နေသော Task များနှင့် မှတ်ဉာဏ်များကို သန့်စင် ရှင်းလင်းပေးလိုက်ပါပြီ။")
 
-# --- Render Deployment Dummy Web Server ---
+# --- Dummy Web Server for Render Service ---
 async def handle_render_health(request):
-    return web.Response(text="Bot is running perfectly on Render!")
+    return web.Response(text="Bot is running perfectly on Render Server!")
 
 async def main():
     await init_db()
     
-    # Render Web Service အဖြစ် လည်ပတ်နိုင်ရန် Port Bind လုပ်ခြင်း
+    # Render Web Service အဖြစ် လည်ပတ်နိုင်ရန် Port Bind လုပ်ခြင်းအပိုင်း
     app = web.Application()
     app.router.add_get("/", handle_render_health)
     runner = web.AppRunner(app)
     await runner.setup()
     
-    # Render ၏ Port အား ဖတ်ယူခြင်း (မရှိပါက default 8080)
     port = int(os.environ.get("PORT", 8080))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    print(f"🌐 Web Server for Render bound to port {port}")
+    print(f"🌐 Web Server bound to port {port}")
     
     print("🤖 Bot is starting polling with MongoDB successfully...")
     await dp.start_polling(bot)
