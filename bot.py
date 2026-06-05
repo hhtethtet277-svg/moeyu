@@ -17,8 +17,8 @@ from aiohttp import web
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 
-ADMIN_ID = 8540557748
-ADMIN_USERNAME = "@kyaw1010"
+ADMIN_ID = 7695807003
+ADMIN_USERNAME = "@Nain663"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
