@@ -41,8 +41,9 @@ class RateLimiter:
 BOT_TOKEN="8819368227:AAFY0h2xNUv1ZNodLPpe0y3w7I-8rtMbrcw"
 BOT_ID = "bot1" # bot2, bot3 အတွက် ပြောင်းပေးရန်
 
-# Master Database
-MASTER_DB = "/root/ruijie_bots/ruijie_master.db"
+# Master Database (Render ပေါ်မှာ ကောင်းမွန်စွာ အလုပ်လုပ်ရန် လက်ရှိ Folder Path အား ယူခြင်း)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MASTER_DB = os.path.join(BASE_DIR, "ruijie_master.db")
 
 ADMIN_ID = 7695807003
 ADMIN_USERNAME = "@Nain663"
@@ -71,7 +72,8 @@ def init_user_state(tg_id):
     if tg_id not in batch_writes: batch_writes[tg_id] = []
 
 def get_user_db_path(tg_id):
-    return f"/root/ruijie_bots/user_data_{tg_id}.db"
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(BASE_DIR, f"user_data_{tg_id}.db")
 
 # ==========================================
 # 💾 SQLite Micro-Database Engine
