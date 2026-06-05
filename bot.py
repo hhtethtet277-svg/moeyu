@@ -7,11 +7,13 @@ import string
 import random
 import asyncio
 import aiohttp
+from aiohttp import web
 import aiosqlite
 from typing import Callable, Dict, Any, Awaitable
 from aiogram import Bot, Dispatcher, types, BaseMiddleware
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from typing import Callable, Dict, Any, Awaitable
 
 class RateLimiter:
     def __init__(self, rate_limit_per_second: float):
@@ -1085,7 +1087,19 @@ async def cmd_refresh(message: types.Message):
 async def main():
     await init_db()
     print(f"Starting {BOT_ID} (Ultimate Safe & Stable Engine)...")
+    
+    # Render အတွက် Fake Port ဖွင့်ပေးခြင်း
+    app = web.Application()
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 10000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"Fake Web Server started on port {port} for Render.")
+    
+    # Bot ကို Polling စတင် Run ခြင်း
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
