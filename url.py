@@ -94,7 +94,7 @@ def fetch_portal():
         print(f"{y}-{w}"*50)
         
         b64_url = base64.b64encode(api_url.encode()).decode()
-        print(f"\n{c}[*] Script ထဲထည့်ရန် API Base64 Code:{w}")
+        print(f"\n{c}[*] ပေါ်လာတဲ့အစမ်းcodeတွေက သုံးစရာမလို API Base64 Code:{w}")
         print(f"{g}{b64_url}{w}\n")
     else:
         print(f"\n{r}[❌] Portal URL ကို ဖမ်းမမိပါ။ အင်တာနက် ပွင့်နေသလား ပြန်စစ်ပါ။{w}")
